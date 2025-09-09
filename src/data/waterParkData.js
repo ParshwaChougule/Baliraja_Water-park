@@ -5,9 +5,9 @@ export const parkInfo = {
   tagline: "The Biggest Theme & Amusement Park",
   description: "Experience the ultimate water adventure with thrilling rides, exciting attractions, and unforgettable memories for the whole family.",
   contact: {
-    address: "123 Water Park Lane, Adventure City, AC 12345",
+    address: "At.post malgaom G NO 2481, TAL MIRAJ DIST SANGLI, Miraj, Miraj, Sangli- 416410, Maharashtra",
     phone: "(+012) 3456 7890",
-    email: "info@waterland.com"
+    email: "balirajaagrotourism01@gmail.com"
   },
   hours: {
     weekdays: "11:00 AM - 16:00 PM",

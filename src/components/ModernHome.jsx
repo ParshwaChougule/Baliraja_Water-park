@@ -1703,15 +1703,15 @@ const ModernHome = () => {
               </p>
               <div style={{ marginBottom: '15px' }}>
                 <i className="fas fa-map-marker-alt" style={{ color: '#4FC3F7', marginRight: '10px' }}></i>
-                <span>123 Street New York, USA</span>
+                <span>At.post malgaom G NO 2481, TAL MIRAJ DIST SANGLI, Miraj, Miraj, Sangli- 416410, Maharashtra</span>
               </div>
               <div style={{ marginBottom: '15px' }}>
                 <i className="fas fa-envelope" style={{ color: '#4FC3F7', marginRight: '10px' }}></i>
-                <span>info@waterland.com</span>
+                <span>balirajaagrotourism01@gmail.com</span>
               </div>
               <div>
                 <i className="fas fa-phone" style={{ color: '#4FC3F7', marginRight: '10px' }}></i>
-                <span>(+012) 3456 7890</span>
+                <span>91 9021553797/91 9284631092</span>
               </div>
             </div>
 
@@ -1821,6 +1821,7 @@ const ModernHome = () => {
           <div style={{ 
             borderTop: '1px solid rgba(255,255,255,0.1)', 
             paddingTop: '30px',
+            marginLeft:'',
             textAlign: 'center'
           }}>
             <p style={{ 

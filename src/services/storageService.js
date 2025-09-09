@@ -65,44 +65,56 @@ export const uploadImage = async (file, folder = 'gallery') => {
   }
 };
 
-// Get all gallery images
+// Get all gallery images - localStorage ONLY (no Firebase dependency)
 export const getGalleryImages = async () => {
   try {
-    if (!db) {
-      return { success: false, error: "Firebase not configured properly" };
-    }
-
-    // Add timeout to prevent hanging connections
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Request timeout')), 10000)
-    );
-
-    const galleryPromise = (async () => {
-      const galleryRef = collection(db, 'gallery');
-      const querySnapshot = await getDocs(galleryRef);
-      
-      const images = [];
-      querySnapshot.forEach((doc) => {
-        images.push({
-          id: doc.id,
-          ...doc.data()
-        });
-      });
-
-      // Sort by upload date (newest first)
-      images.sort((a, b) => {
-        const dateA = a.uploadedAt?.toDate ? a.uploadedAt.toDate() : new Date(a.uploadedAt);
-        const dateB = b.uploadedAt?.toDate ? b.uploadedAt.toDate() : new Date(b.uploadedAt);
-        return dateB - dateA;
-      });
-
-      return { success: true, images };
-    })();
-
-    return await Promise.race([galleryPromise, timeoutPromise]);
+    console.log('🔍 getGalleryImages: Loading from localStorage only...');
+    
+    const localImages = JSON.parse(localStorage.getItem('adminGalleryImages') || '[]');
+    const categorizedImages = JSON.parse(localStorage.getItem('adminCategorizedImages') || '{"water":[],"fun":[],"garden":[]}');
+    
+    console.log('📱 localStorage data:', {
+      adminGalleryImages: localImages.length,
+      water: categorizedImages.water?.length || 0,
+      fun: categorizedImages.fun?.length || 0,
+      garden: categorizedImages.garden?.length || 0
+    });
+    
+    // Combine all local images
+    const allLocalImages = [
+      ...localImages,
+      ...(categorizedImages.water || []),
+      ...(categorizedImages.fun || []),
+      ...(categorizedImages.garden || [])
+    ];
+    
+    // Remove duplicates based on name or id
+    const uniqueLocalImages = allLocalImages.reduce((acc, current) => {
+      const exists = acc.find(img => 
+        img.id === current.id || 
+        img.name === current.name ||
+        img.url === current.url
+      );
+      if (!exists) {
+        acc.push(current);
+      }
+      return acc;
+    }, []);
+    
+    console.log(`📦 Found ${uniqueLocalImages.length} unique images in localStorage`);
+    
+    // Sort by upload date (newest first)
+    uniqueLocalImages.sort((a, b) => {
+      const dateA = new Date(a.uploadedAt || a.timestamp || 0);
+      const dateB = new Date(b.uploadedAt || b.timestamp || 0);
+      return dateB - dateA;
+    });
+    
+    console.log('✅ Returning localStorage images immediately');
+    return { success: true, images: uniqueLocalImages };
+    
   } catch (error) {
-    console.error('Error getting gallery images:', error);
-    // Return fallback data instead of error for better UX
+    console.error('❌ Error reading localStorage:', error);
     return { success: false, error: error.message, images: [] };
   }
 };
@@ -165,51 +177,71 @@ export const deleteImage = async (imageId, imagePath) => {
 // Upload multiple images to Firebase Storage
 export const uploadMultipleImages = async (files, folder = 'gallery') => {
   try {
+    console.log('🔥 Firebase Storage check:', !!storage);
+    console.log('🔥 Firebase Firestore check:', !!db);
+    console.log('📁 Upload folder:', folder);
+    console.log('📸 Files to upload:', files.length);
+    
     if (!storage || !db) {
-      console.error('Firebase Storage or Firestore not available');
+      console.error('❌ Firebase Storage or Firestore not available');
+      console.error('Storage available:', !!storage);
+      console.error('DB available:', !!db);
+      
+      // Try to reinitialize Firebase
+      try {
+        const firebase = await import('../firebase');
+        if (firebase.storage && firebase.db) {
+          console.log('🔄 Firebase reinitialized successfully');
+          // Update local references
+          const storageService = await import('../services/storageService');
+          return storageService.uploadMultipleImages(files, folder);
+        }
+      } catch (reinitError) {
+        console.error('❌ Firebase reinit failed:', reinitError);
+      }
+      
       return files.map(file => ({
         success: false,
-        error: 'Firebase not configured properly',
+        error: 'Firebase not configured properly - Storage or Firestore unavailable',
         fileName: file.name
       }));
     }
 
-    console.log(`Starting upload of ${files.length} files to Firebase Storage`);
+    console.log(`Starting upload of ${files.length} files to Firebase Storage folder: ${folder}`);
 
     // Upload all files in parallel for maximum speed
     const uploadPromises = files.map(async (file, i) => {
       try {
-        // Create unique filename
+        // Create unique filename - simplified for speed
         const timestamp = Date.now();
-        const filename = `${timestamp}_${i}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+        const randomId = Math.random().toString(36).substr(2, 6);
+        const ext = file.name.split('.').pop();
+        const filename = `${timestamp}_${randomId}.${ext}`;
         const storageRef = ref(storage, `${folder}/${filename}`);
 
-        console.log(`Uploading file: ${file.name} as ${filename}`);
+        console.log(`[${i+1}/${files.length}] Fast upload: ${file.name}`);
 
-        // Upload file to Firebase Storage
+        // Direct upload without timeout for speed
         const snapshot = await uploadBytes(storageRef, file);
         const downloadURL = await getDownloadURL(snapshot.ref);
-
-        console.log(`File uploaded successfully: ${file.name}, URL: ${downloadURL}`);
 
         // Extract category from folder path (e.g., "gallery/water" -> "water")
         const category = folder.includes('/') ? folder.split('/')[1] : 'water';
         
-        // Save image metadata to Firestore
+        // Minimal metadata for speed
         const imageData = {
           name: file.name,
           url: downloadURL,
           path: snapshot.ref.fullPath,
           size: file.size,
           type: file.type,
-          folder: folder,
-          category: category, // Add category field
+          category: category,
           uploadedAt: serverTimestamp()
         };
 
+        // Save to Firestore
         const docRef = await addDoc(collection(db, "gallery"), imageData);
-
-        console.log(`Metadata saved to Firestore with ID: ${docRef.id}`);
+        console.log(`✅ ${file.name} → Firebase`);
 
         return {
           success: true,
@@ -219,35 +251,32 @@ export const uploadMultipleImages = async (files, folder = 'gallery') => {
           name: file.name,
           size: file.size,
           type: file.type,
-          category: category, // Include category in return data
+          category: category,
           path: snapshot.ref.fullPath,
-          uploadedAt: new Date()
+          uploadedAt: new Date(),
+          source: 'firebase'
         };
 
       } catch (error) {
-        console.error(`Error uploading file ${file.name}:`, error);
+        console.error(`❌ ${file.name} failed:`, error.message);
         return {
           success: false,
-          error: error.message,
+          error: error.message || 'Upload failed',
           fileName: file.name
         };
       }
     });
     
     const results = await Promise.all(uploadPromises);
-    
     const successCount = results.filter(r => r.success).length;
-    const failCount = results.filter(r => !r.success).length;
-    
-    console.log(`Upload completed: ${successCount} successful, ${failCount} failed`);
-    console.log('All results:', results);
+    console.log(`🚀 Batch complete: ${successCount}/${files.length} uploaded`);
     
     return results;
   } catch (error) {
-    console.error('Error in uploadMultipleImages:', error);
+    console.error('❌ Upload batch failed:', error.message);
     return files.map(file => ({
       success: false,
-      error: error.message,
+      error: 'Batch upload failed',
       fileName: file.name
     }));
   }

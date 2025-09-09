@@ -56,10 +56,17 @@ try {
   storage = getStorage(app);
   realtimeDb = getDatabase(app);
 
-  console.log('Firebase initialized successfully');
+  console.log('🔥 Firebase initialized successfully');
+  console.log('✅ Auth:', !!auth);
+  console.log('✅ Firestore:', !!db);
+  console.log('✅ Storage:', !!storage);
+  console.log('✅ Realtime DB:', !!realtimeDb);
+  console.log('📦 Storage Bucket:', firebaseConfig.storageBucket);
+  
   isOfflineMode = false;
 } catch (error) {
-  console.error('Firebase initialization error:', error);
+  console.error('❌ Firebase initialization error:', error);
+  console.error('Config used:', firebaseConfig);
   isOfflineMode = true;
   auth = null;
   db = null;

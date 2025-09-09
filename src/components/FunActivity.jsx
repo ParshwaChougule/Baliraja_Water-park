@@ -10,60 +10,113 @@ const FunActivity = () => {
   useEffect(() => {
     const loadFunImages = async () => {
       try {
-        // Load from both Firebase and localStorage
-        const [firebaseResult, localImages] = await Promise.all([
-          getGalleryImages().catch(() => ({ success: false, images: [] })),
-          Promise.resolve(JSON.parse(localStorage.getItem('adminGalleryImages') || '[]'))
-        ]);
-
+        console.log('🎮 FunActivity: Loading images...');
+        
         let funActivityImages = [];
 
-        // Process Firebase images first
-        if (firebaseResult.success && firebaseResult.images.length > 0) {
-          funActivityImages = firebaseResult.images.filter(image => 
-            image.category === 'fun' || (!image.category && image.path && image.path.includes('fun'))
-          );
-        }
-
-        // Process localStorage images and merge (avoid duplicates)
-        if (localImages.length > 0) {
-          const localFunImages = localImages.filter(image => 
-            image.category === 'fun' || (!image.category && image.path && image.path.includes('fun'))
-          );
+        // Load from localStorage first (admin uploads)
+        try {
+          const localImages = JSON.parse(localStorage.getItem('adminGalleryImages') || '[]');
+          const categorizedImages = JSON.parse(localStorage.getItem('adminCategorizedImages') || '{"water":[],"fun":[],"garden":[]}');
+          
+          console.log('📱 LocalStorage check:', {
+            adminGalleryImages: localImages.length,
+            funCategoryImages: categorizedImages.fun ? categorizedImages.fun.length : 0
+          });
+          
+          // Get fun images from both sources
+          const allLocalImages = [...localImages, ...categorizedImages.fun];
+          
+          const localFunImages = allLocalImages.filter(image => {
+            return image.category === 'fun' || 
+                   (!image.category && image.path && image.path.includes('fun'));
+          });
+          
+          console.log(`🎮 Found ${localFunImages.length} fun images in localStorage`);
           
           localFunImages.forEach(image => {
             const exists = funActivityImages.some(existing => 
-              existing.url === image.url || existing.name === image.name
+              existing.id === image.id || existing.url === image.url || existing.name === image.name
             );
             if (!exists) {
-              // Use localUrl for display if available, otherwise use url
-              const displayImage = {
+              funActivityImages.push({
                 ...image,
-                url: image.localUrl || image.url
-              };
-              funActivityImages.push(displayImage);
+                url: image.url || image.localUrl
+              });
             }
           });
+        } catch (localError) {
+          console.error('❌ Error loading from localStorage:', localError);
+        }
+
+        // Load from getGalleryImages (which now prioritizes localStorage)
+        try {
+          console.log('🔍 Loading from getGalleryImages...');
+          const result = await getGalleryImages();
+          console.log('🔍 getGalleryImages result:', result);
+          
+          if (result.success && result.images && result.images.length > 0) {
+            const funFromService = result.images.filter(img => {
+              const isFun = img.category === 'fun' || 
+                           (img.name && img.name.toLowerCase().includes('fun')) ||
+                           (img.path && img.path.toLowerCase().includes('fun'));
+              if (isFun) {
+                console.log('🎮 Found fun image from service:', {
+                  name: img.name,
+                  category: img.category,
+                  source: img.source || 'unknown',
+                  hasUrl: !!img.url
+                });
+              }
+              return isFun;
+            });
+            
+            console.log(`🎮 Fun images from service: ${funFromService.length}`);
+            
+            // Merge with existing images, avoiding duplicates
+            funFromService.forEach(img => {
+              const exists = funActivityImages.some(existing => 
+                existing.id === img.id || existing.name === img.name || existing.url === img.url
+              );
+              if (!exists) {
+                funActivityImages.push(img);
+              }
+            });
+          }
+        } catch (serviceError) {
+          console.error('❌ Error loading from getGalleryImages:', serviceError);
         }
 
         setFunImages(funActivityImages);
-        console.log(`Fun Activity: Loaded ${funActivityImages.length} images`);
+        console.log(`✅ FunActivity: Final count = ${funActivityImages.length} images`);
       } catch (error) {
-        console.error('Error loading fun activity images:', error);
+        console.error('❌ Error loading fun activity images:', error);
       }
       setLoading(false);
     };
 
     loadFunImages();
 
-    // Listen for gallery updates
+    // Listen for gallery updates from admin dashboard
     const handleGalleryUpdate = () => {
-      console.log('Fun Activity: Gallery update received, reloading...');
-      loadFunImages();
+      console.log('🔄 FunActivity: Admin gallery update received, reloading...');
+      setTimeout(loadFunImages, 100);
+    };
+
+    const handleStorageChange = (e) => {
+      if (e.key === 'adminGalleryImages' || e.key === 'adminCategorizedImages') {
+        console.log('🔄 FunActivity: Storage change detected, reloading...');
+        setTimeout(loadFunImages, 100);
+      }
     };
 
     window.addEventListener('adminGalleryUpdate', handleGalleryUpdate);
-    return () => window.removeEventListener('adminGalleryUpdate', handleGalleryUpdate);
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('adminGalleryUpdate', handleGalleryUpdate);
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
   return (

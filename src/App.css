@@ -78,6 +78,39 @@ html {
   width: 100%;
 }
 
+/* Navbar Dropdown Hover Functionality */
+.navbar-nav .dropdown:hover .dropdown-menu {
+  display: block !important;
+  margin-top: 0;
+}
+
+.navbar-nav .dropdown-toggle {
+  cursor: pointer;
+}
+
+.navbar-nav .dropdown-toggle:hover {
+  color: #0d6efd !important;
+}
+
+.navbar-nav .dropdown-menu {
+  transition: all 0.3s ease;
+  border: none;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  padding: 0.5rem 0;
+}
+
+.navbar-nav .dropdown-item {
+  padding: 0.75rem 1.5rem;
+  transition: all 0.2s ease;
+}
+
+.navbar-nav .dropdown-item:hover {
+  background-color: #f8f9fa;
+  color: #0d6efd;
+  transform: translateX(5px);
+}
+
 /* Section Spacing */
 section {
   padding: 80px 0;

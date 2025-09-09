@@ -7,63 +7,161 @@ const GardenActivity = () => {
   const [gardenImages, setGardenImages] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const loadGardenImages = async () => {
+  const loadGardenImages = async () => {
+    try {
+      console.log('🌿 GardenActivity: Loading images...');
+      console.log('🔍 Current localStorage contents:');
+      console.log('adminGalleryImages:', localStorage.getItem('adminGalleryImages'));
+      console.log('adminCategorizedImages:', localStorage.getItem('adminCategorizedImages'));
+      
+      let gardenActivityImages = [];
+
+      // Load from localStorage first (admin uploads)
       try {
-        // Load from both Firebase and localStorage
-        const [firebaseResult, localImages] = await Promise.all([
-          getGalleryImages().catch(() => ({ success: false, images: [] })),
-          Promise.resolve(JSON.parse(localStorage.getItem('adminGalleryImages') || '[]'))
-        ]);
-
-        let gardenActivityImages = [];
-
-        // Process Firebase images first
-        if (firebaseResult.success && firebaseResult.images.length > 0) {
-          gardenActivityImages = firebaseResult.images.filter(image => 
-            image.category === 'garden' || (!image.category && image.path && image.path.includes('garden'))
+        const localImages = JSON.parse(localStorage.getItem('adminGalleryImages') || '[]');
+        const categorizedImages = JSON.parse(localStorage.getItem('adminCategorizedImages') || '{"water":[],"fun":[],"garden":[]}');
+        
+        console.log('📱 LocalStorage check:', {
+          adminGalleryImages: localImages.length,
+          gardenCategoryImages: categorizedImages.garden ? categorizedImages.garden.length : 0
+        });
+        
+        // Get garden images from both sources
+        const allLocalImages = [...localImages, ...(categorizedImages.garden || [])];
+        
+        const localGardenImages = allLocalImages.filter(image => {
+          return image.category === 'garden' || 
+                 (!image.category && image.path && image.path.includes('garden'));
+        });
+        
+        console.log(`🌿 Found ${localGardenImages.length} garden images in localStorage`);
+        
+        // Show detailed info about found images
+        localGardenImages.forEach((img, index) => {
+          console.log(`🔍 Garden image ${index + 1}:`, {
+            name: img.name,
+            category: img.category,
+            hasUrl: !!img.url,
+            source: img.source
+          });
+        });
+        
+        localGardenImages.forEach(image => {
+          const exists = gardenActivityImages.some(existing => 
+            existing.id === image.id || existing.url === image.url || existing.name === image.name
           );
-        }
+          if (!exists) {
+            gardenActivityImages.push({
+              ...image,
+              url: image.url || image.localUrl
+            });
+          }
+        });
+      } catch (localError) {
+        console.error('❌ Error loading from localStorage:', localError);
+      }
 
-        // Process localStorage images and merge (avoid duplicates)
-        if (localImages.length > 0) {
-          const localGardenImages = localImages.filter(image => 
-            image.category === 'garden' || (!image.category && image.path && image.path.includes('garden'))
-          );
+      // Load from getGalleryImages (which now prioritizes localStorage)
+      try {
+        console.log('🔍 Loading from getGalleryImages...');
+        const result = await getGalleryImages();
+        console.log('🔍 getGalleryImages result:', result);
+        
+        if (result.success && result.images && result.images.length > 0) {
+          const gardenFromService = result.images.filter(img => {
+            const isGarden = img.category === 'garden' || 
+                           (img.name && img.name.toLowerCase().includes('garden')) ||
+                           (img.path && img.path.toLowerCase().includes('garden'));
+            if (isGarden) {
+              console.log('🌿 Found garden image from service:', {
+                name: img.name,
+                category: img.category,
+                source: img.source || 'unknown',
+                hasUrl: !!img.url
+              });
+            }
+            return isGarden;
+          });
           
-          localGardenImages.forEach(image => {
+          console.log(`🌿 Garden images from service: ${gardenFromService.length}`);
+          
+          // Merge with existing images, avoiding duplicates
+          gardenFromService.forEach(img => {
             const exists = gardenActivityImages.some(existing => 
-              existing.url === image.url || existing.name === image.name
+              existing.id === img.id || existing.name === img.name || existing.url === img.url
             );
             if (!exists) {
-              // Use localUrl for display if available, otherwise use url
-              const displayImage = {
-                ...image,
-                url: image.localUrl || image.url
-              };
-              gardenActivityImages.push(displayImage);
+              gardenActivityImages.push(img);
             }
           });
         }
-
-        setGardenImages(gardenActivityImages);
-        console.log(`Garden Activity: Loaded ${gardenActivityImages.length} images`);
-      } catch (error) {
-        console.error('Error loading garden activity images:', error);
+      } catch (serviceError) {
+        console.error('❌ Error loading from getGalleryImages:', serviceError);
       }
-      setLoading(false);
-    };
 
+      setGardenImages(gardenActivityImages);
+      console.log(`✅ GardenActivity: Final count = ${gardenActivityImages.length} images`);
+      
+      // Force immediate UI update if we have images
+      if (gardenActivityImages.length > 0) {
+        console.log('🚀 GardenActivity: Forcing immediate UI update with images');
+        setGardenImages([...gardenActivityImages]); // Force re-render
+      }
+    } catch (error) {
+      console.error('❌ Error loading garden activity images:', error);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
     loadGardenImages();
-
-    // Listen for gallery updates
-    const handleGalleryUpdate = () => {
-      console.log('Garden Activity: Gallery update received, reloading...');
-      loadGardenImages();
+    
+    // Listen for admin gallery updates with multiple event types
+    const handleAdminUpdate = (e) => {
+      console.log('📡 GardenActivity: Received adminGalleryUpdate event', e.detail);
+      setTimeout(() => {
+        loadGardenImages();
+      }, 100); // Reduced delay for faster sync
     };
-
-    window.addEventListener('adminGalleryUpdate', handleGalleryUpdate);
-    return () => window.removeEventListener('adminGalleryUpdate', handleGalleryUpdate);
+    
+    const handleGardenUpdate = (e) => {
+      console.log('🌿 GardenActivity: Received gardenGalleryUpdate event', e.detail);
+      setTimeout(() => {
+        loadGardenImages();
+      }, 50);
+    };
+    
+    // Listen for storage changes (cross-tab sync)
+    const handleStorageChange = (e) => {
+      if (e.key === 'adminGalleryImages' || e.key === 'adminCategorizedImages') {
+        console.log('📡 GardenActivity: Storage changed, reloading images');
+        setTimeout(() => {
+          loadGardenImages();
+        }, 100);
+      }
+    };
+    
+    // Multiple event listeners for better sync
+    window.addEventListener('adminGalleryUpdate', handleAdminUpdate);
+    window.addEventListener('gardenGalleryUpdate', handleGardenUpdate);
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Also listen for page visibility changes to reload when tab becomes active
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log('👁️ GardenActivity: Tab became visible, reloading images');
+        loadGardenImages();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      window.removeEventListener('adminGalleryUpdate', handleAdminUpdate);
+      window.removeEventListener('gardenGalleryUpdate', handleGardenUpdate);
+      window.removeEventListener('storage', handleStorageChange);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   return (
@@ -122,10 +220,42 @@ const GardenActivity = () => {
             <div className="row g-4">
               {gardenImages.length === 0 ? (
                 <div className="col-12 text-center py-5">
-                  <div className="alert alert-light border-info">
-                    <span className="fs-1 mb-3 d-block">🍃</span>
-                    <h5 className="text-info">No Garden Activity Images Yet</h5>
-                    <p className="mb-0">Garden activity images will appear here when uploaded through admin dashboard.</p>
+                  <div className="alert alert-info border-primary">
+                    <span className="fs-1 mb-3 d-block">🌿</span>
+                    <h5 className="text-primary">No Garden Activity Images Yet</h5>
+                    <p className="mb-3">Garden activity images will appear here when uploaded through admin dashboard.</p>
+                    <button 
+                      className="btn btn-primary btn-sm"
+                      onClick={() => {
+                        console.log('🔄 Manual refresh triggered');
+                        setLoading(true);
+                        loadGardenImages();
+                      }}
+                    >
+                      🔄 Refresh Images
+                    </button>
+                    <button 
+                      className="btn btn-warning btn-sm ms-2"
+                      onClick={() => {
+                        console.log('🔍 Debug localStorage:');
+                        const adminImages = localStorage.getItem('adminGalleryImages');
+                        const categorizedImages = localStorage.getItem('adminCategorizedImages');
+                        console.log('Raw adminGalleryImages:', adminImages);
+                        console.log('Raw adminCategorizedImages:', categorizedImages);
+                        if (adminImages) {
+                          const parsed = JSON.parse(adminImages);
+                          console.log('Parsed adminGalleryImages:', parsed);
+                          console.log('Garden images in adminGalleryImages:', parsed.filter(img => img.category === 'garden'));
+                        }
+                        if (categorizedImages) {
+                          const parsed = JSON.parse(categorizedImages);
+                          console.log('Parsed categorizedImages:', parsed);
+                          console.log('Garden category images:', parsed.garden);
+                        }
+                      }}
+                    >
+                      🔍 Debug Data
+                    </button>
                   </div>
                 </div>
               ) : (

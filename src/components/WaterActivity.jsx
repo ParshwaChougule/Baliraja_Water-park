@@ -6,64 +6,168 @@ import { getGalleryImages } from '../services/storageService';
 const WaterActivity = () => {
   const [waterImages, setWaterImages] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [lastRefresh, setLastRefresh] = useState(Date.now());
 
-  useEffect(() => {
-    const loadWaterImages = async () => {
+  const loadWaterImages = async () => {
+    try {
+      console.log('🌊 WaterActivity: Loading images...');
+      
+      let waterActivityImages = [];
+
+      // Load from localStorage first (admin uploads)
       try {
-        // Load from both Firebase and localStorage
-        const [firebaseResult, localImages] = await Promise.all([
-          getGalleryImages().catch(() => ({ success: false, images: [] })),
-          Promise.resolve(JSON.parse(localStorage.getItem('adminGalleryImages') || '[]'))
-        ]);
-
-        let waterActivityImages = [];
-
-        // Process Firebase images first
-        if (firebaseResult.success && firebaseResult.images.length > 0) {
-          waterActivityImages = firebaseResult.images.filter(image => 
-            image.category === 'water' || (!image.category && image.path && image.path.includes('water'))
-          );
-        }
-
-        // Process localStorage images and merge (avoid duplicates)
-        if (localImages.length > 0) {
-          const localWaterImages = localImages.filter(image => 
-            image.category === 'water' || (!image.category && image.path && image.path.includes('water'))
-          );
+        const adminImages = localStorage.getItem('adminGalleryImages');
+        const adminCategorizedImages = localStorage.getItem('adminCategorizedImages');
+        
+        console.log('📱 localStorage data found:', {
+          adminImages: adminImages ? 'YES' : 'NO',
+          adminCategorizedImages: adminCategorizedImages ? 'YES' : 'NO'
+        });
+        
+        if (adminImages) {
+          const parsedAdminImages = JSON.parse(adminImages);
+          console.log('📱 Total admin images:', parsedAdminImages.length);
           
-          localWaterImages.forEach(image => {
+          // Filter for water category images
+          const waterFromAdmin = parsedAdminImages.filter(img => {
+            const isWater = img.category === 'water' || 
+                           (img.name && img.name.toLowerCase().includes('water')) ||
+                           (img.path && img.path.toLowerCase().includes('water'));
+            if (isWater) {
+              console.log('🌊 Found water image from admin:', {
+                name: img.name,
+                category: img.category,
+                source: img.source || 'admin',
+                hasUrl: !!img.url
+              });
+            }
+            return isWater;
+          });
+          
+          waterActivityImages = [...waterActivityImages, ...waterFromAdmin];
+          console.log('🌊 Water images from localStorage:', waterFromAdmin.length);
+        }
+        
+        if (adminCategorizedImages) {
+          const parsedCategorized = JSON.parse(adminCategorizedImages);
+          if (parsedCategorized.water && Array.isArray(parsedCategorized.water)) {
+            console.log('🌊 Water category images from localStorage:', parsedCategorized.water.length);
+            waterActivityImages = [...waterActivityImages, ...parsedCategorized.water];
+          }
+        }
+      } catch (localStorageError) {
+        console.error('❌ Error reading from localStorage:', localStorageError);
+      }
+
+      // Load from getGalleryImages (which now prioritizes localStorage)
+      try {
+        console.log('🔍 Loading from getGalleryImages...');
+        const result = await getGalleryImages();
+        console.log('🔍 getGalleryImages result:', result);
+        
+        if (result.success && result.images && result.images.length > 0) {
+          const waterFromService = result.images.filter(img => {
+            const isWater = img.category === 'water' || 
+                           (img.name && img.name.toLowerCase().includes('water')) ||
+                           (img.path && img.path.toLowerCase().includes('water'));
+            if (isWater) {
+              console.log('🌊 Found water image from service:', {
+                name: img.name,
+                category: img.category,
+                source: img.source || 'unknown',
+                hasUrl: !!img.url
+              });
+            }
+            return isWater;
+          });
+          
+          console.log(`🌊 Water images from service: ${waterFromService.length}`);
+          
+          // Merge with existing images, avoiding duplicates
+          waterFromService.forEach(img => {
             const exists = waterActivityImages.some(existing => 
-              existing.url === image.url || existing.name === image.name
+              existing.id === img.id || existing.name === img.name || existing.url === img.url
             );
             if (!exists) {
-              // Use localUrl for display if available, otherwise use url
-              const displayImage = {
-                ...image,
-                url: image.localUrl || image.url
-              };
-              waterActivityImages.push(displayImage);
+              waterActivityImages.push(img);
             }
           });
         }
-
-        setWaterImages(waterActivityImages);
-        console.log(`Water Activity: Loaded ${waterActivityImages.length} images`);
-      } catch (error) {
-        console.error('Error loading water activity images:', error);
+      } catch (serviceError) {
+        console.error('❌ Error loading from getGalleryImages:', serviceError);
       }
-      setLoading(false);
-    };
 
+      // Remove duplicates based on name or url
+      const uniqueImages = waterActivityImages.reduce((acc, current) => {
+        const isDuplicate = acc.find(img => 
+          (img.name && current.name && img.name === current.name) ||
+          (img.url && current.url && img.url === current.url)
+        );
+        if (!isDuplicate) {
+          acc.push(current);
+        }
+        return acc;
+      }, []);
+
+      console.log('🌊 Final water images count:', uniqueImages.length);
+      console.log('🌊 Water images:', uniqueImages.map(img => ({
+        name: img.name,
+        category: img.category,
+        source: img.source,
+        hasUrl: !!img.url
+      })));
+      
+      setWaterImages(uniqueImages);
+      setLastRefresh(Date.now());
+    } catch (error) {
+      console.error('❌ Error loading water activity images:', error);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
     loadWaterImages();
 
-    // Listen for gallery updates
-    const handleGalleryUpdate = () => {
-      console.log('Water Activity: Gallery update received, reloading...');
-      loadWaterImages();
+    // Listen for gallery updates from admin dashboard
+    const handleGalleryUpdate = (event) => {
+      console.log('🔄 WaterActivity: Admin gallery update event received!');
+      console.log('🔄 Event details:', event.detail);
+      console.log('🔄 Reloading water images in 200ms...');
+      setTimeout(() => {
+        console.log('🔄 Starting reload...');
+        loadWaterImages();
+      }, 200);
     };
 
+    // Listen for storage events (cross-tab updates)
+    const handleStorageChange = (e) => {
+      console.log('🔄 WaterActivity: Storage change event:', {
+        key: e.key,
+        newValue: e.newValue ? 'HAS_VALUE' : 'NULL'
+      });
+      
+      if (e.key === 'adminGalleryImages' || e.key === 'adminCategorizedImages') {
+        console.log('🔄 WaterActivity: Relevant storage change detected, reloading...');
+        setTimeout(loadWaterImages, 200);
+      }
+    };
+
+    // Test event listener registration
+    console.log('🔍 WaterActivity: Registering event listeners...');
     window.addEventListener('adminGalleryUpdate', handleGalleryUpdate);
-    return () => window.removeEventListener('adminGalleryUpdate', handleGalleryUpdate);
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Test if events are working
+    setTimeout(() => {
+      console.log('🗺 Testing adminGalleryUpdate event...');
+      window.dispatchEvent(new CustomEvent('adminGalleryUpdate'));
+    }, 1000);
+    
+    return () => {
+      console.log('🔍 WaterActivity: Removing event listeners...');
+      window.removeEventListener('adminGalleryUpdate', handleGalleryUpdate);
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
   return (
@@ -116,51 +220,70 @@ const WaterActivity = () => {
               <div className="spinner-border text-primary" role="status">
                 <span className="visually-hidden">Loading...</span>
               </div>
-              <p className="mt-3">Loading water activity images...</p>
+            </div>
+          ) : waterImages.length === 0 ? (
+            <div className="row">
+              <div className="col-12 text-center py-5">
+                <div className="alert alert-info border-primary">
+                  <span className="fs-1 mb-3 d-block">🏊‍♂️</span>
+                  <h5 className="text-primary">No Water Activity Images Yet</h5>
+                  <p className="mb-3">Water activity images will appear here when uploaded through admin dashboard.</p>
+                  <button 
+                    className="btn btn-primary btn-sm"
+                    onClick={() => {
+                      console.log('🔄 Manual refresh triggered');
+                      setLoading(true);
+                      setLastRefresh(Date.now());
+                      loadWaterImages();
+                    }}
+                  >
+                    🔄 Refresh Images
+                  </button>
+                  <small className="d-block mt-2 text-muted">
+                    Last checked: {new Date(lastRefresh).toLocaleTimeString()}
+                  </small>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="row g-4">
-              {waterImages.length === 0 ? (
-                <div className="col-12 text-center py-5">
-                  <div className="alert alert-info border-primary">
-                    <span className="fs-1 mb-3 d-block">🏊‍♂️</span>
-                    <h5 className="text-primary">No Water Activity Images Yet</h5>
-                    <p className="mb-0">Water activity images will appear here when uploaded through admin dashboard.</p>
-                  </div>
-                </div>
-              ) : (
-                waterImages.map((image, index) => (
-                  <div key={image.id} className={`col-md-${index % 3 === 0 ? '6' : '3'} wow fadeInUp`} data-wow-delay={`${0.2 + (index * 0.2)}s`}>
-                    <div className="gallery-item position-relative">
-                      <img 
-                        src={image.url || image.path || `https://via.placeholder.com/400x300?text=${encodeURIComponent(image.name || 'Water Activity')}`} 
-                        className="img-fluid rounded w-100 h-100" 
-                        alt={image.name || 'Water Activity Image'}
-                        onError={(e) => {
-                          console.error('Image failed to load:', image);
-                          e.target.src = `https://via.placeholder.com/400x300?text=${encodeURIComponent(image.name || 'Image Not Found')}`;
-                        }}
-                        style={{ 
-                          minHeight: '200px', 
-                          objectFit: 'cover',
-                          backgroundColor: '#f8f9fa'
-                        }}
-                      />
-                      {/* Water Activity Badge */}
-                      <div className="position-absolute top-0 start-0 m-2">
-                        <span className="badge bg-primary">
-                          🏊‍♂️ Water Activity
-                        </span>
-                      </div>
-                      <div className="search-icon">
-                        <a href={image.url || image.path || '#'} className="btn btn-light btn-lg-square rounded-circle" data-lightbox={`WaterActivity-${index}`}>
-                          <i className="fas fa-search-plus"></i>
-                        </a>
-                      </div>
+              {waterImages.map((image, index) => (
+                <div key={image.id || index} className="col-lg-4 col-md-6 wow fadeInUp" data-wow-delay="0.2s">
+                  <div className="gallery-item position-relative overflow-hidden rounded">
+                    <img 
+                      src={image.url || image.path || `https://via.placeholder.com/400x300?text=${encodeURIComponent(image.name || 'Water Activity')}`}
+                      className="img-fluid rounded w-100 h-100" 
+                      alt={image.name || 'Water Activity Image'}
+                      onError={(e) => {
+                        console.error('❌ Image failed to load:', {
+                          name: image.name,
+                          url: image.url,
+                          path: image.path,
+                          category: image.category,
+                          source: image.source
+                        });
+                        e.target.src = `https://via.placeholder.com/400x300?text=${encodeURIComponent(image.name || 'Image Not Found')}`;
+                      }}
+                      style={{ 
+                        minHeight: '200px', 
+                        objectFit: 'cover',
+                        backgroundColor: '#f8f9fa'
+                      }}
+                    />
+                    {/* Water Activity Badge */}
+                    <div className="position-absolute top-0 start-0 m-2">
+                      <span className="badge bg-primary">
+                        🏊‍♂️ Water Activity
+                      </span>
+                    </div>
+                    <div className="search-icon">
+                      <a href={image.url || image.path || '#'} className="btn btn-light btn-lg-square rounded-circle" data-lightbox={`WaterActivity-${index}`}>
+                        <i className="fas fa-search-plus"></i>
+                      </a>
                     </div>
                   </div>
-                ))
-              )}
+                </div>
+              ))}
             </div>
           )}
 
