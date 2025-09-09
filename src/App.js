@@ -35,7 +35,7 @@ const AboutPage = () => (
       <div className="container">
         <div className="row">
           <div className="col-12 text-center">
-            <h1 className="display-4 fw-bold mb-4">About WaterLand</h1>
+            <h1 className="display-4 fw-bold mb-4">About Baliraja</h1>
             <p className="lead">Learn more about our amazing water park and what makes us special.</p>
           </div>
         </div>

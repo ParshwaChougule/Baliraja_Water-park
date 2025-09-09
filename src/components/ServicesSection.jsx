@@ -19,7 +19,7 @@ const ServicesSection = () => {
       <Container>
         <Row className="mb-5">
           <Col lg={8} className="mx-auto text-center">
-            <h4 className="text-primary mb-2">Explore Waterland Park Services</h4>
+            <h4 className="text-primary mb-2">Explore Baliraja Park Services</h4>
             <h2 className="display-5 fw-bold mb-4">Premium Services & Facilities</h2>
             <p className="lead text-muted">
               Enjoy world-class amenities and services designed to make your visit 

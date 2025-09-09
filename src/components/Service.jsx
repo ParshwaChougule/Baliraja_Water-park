@@ -83,7 +83,7 @@ const Service = () => {
         {/* Title Section */}
         <div className="text-center mb-5">
           <h6 className="text-info">Our Service</h6>
-          <h2 className="fw-bold">Explore Waterland Park service</h2>
+          <h2 className="fw-bold">Explore Baliraja Park service</h2>
           <p className="text-light mx-auto" style={{ maxWidth: "700px" }}>
             Lorem ipsum dolor, sit amet consectetur adipisicing elit. Tenetur
             adipisci facilis cupiditate recusandae aperiam temporibus corporis
