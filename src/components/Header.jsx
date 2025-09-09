@@ -18,24 +18,22 @@ const Header = () => {
       {/* Top Info Bar */}
       <div className="bg-primary text-white py-2 d-none d-md-block">
         <Container>
-          <div className="row align-items-center">
-            <div className="col-md-8">
+          <marquee behavior="scroll" direction="left" scrollamount="5">
+            <div className="d-flex align-items-center" style={{ whiteSpace: 'nowrap' }}>
               <small className="me-4">
                 <FaPhone className="me-1" /> {parkInfo.contact.phone}
               </small>
               <small className="me-4">
                 <FaEnvelope className="me-1" /> {parkInfo.contact.email}
               </small>
-              <small>
+              <small className="me-4">
                 <FaClock className="me-1" /> Open: {parkInfo.hours.weekdays}
               </small>
-            </div>
-            <div className="col-md-4 text-end">
               <small>
                 <FaMapMarkerAlt className="me-1" /> {parkInfo.contact.address}
               </small>
             </div>
-          </div>
+          </marquee>
         </Container>
       </div>
 
