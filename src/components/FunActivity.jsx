@@ -14,37 +14,41 @@ const FunActivity = () => {
         
         let funActivityImages = [];
 
-        // Load from localStorage first (admin uploads)
+        // Load from localStorage first (admin uploaded images)
         try {
           const localImages = JSON.parse(localStorage.getItem('adminGalleryImages') || '[]');
-          const categorizedImages = JSON.parse(localStorage.getItem('adminCategorizedImages') || '{"water":[],"fun":[],"garden":[]}');
+          const categorizedImages = JSON.parse(localStorage.getItem('adminCategorizedImages') || '{}');
           
-          console.log('📱 LocalStorage check:', {
-            adminGalleryImages: localImages.length,
-            funCategoryImages: categorizedImages.fun ? categorizedImages.fun.length : 0
-          });
+          console.log('📱 localStorage adminGalleryImages:', localImages.length);
+          console.log('📱 localStorage categorizedImages:', categorizedImages);
           
-          // Get fun images from both sources
-          const allLocalImages = [...localImages, ...categorizedImages.fun];
-          
-          const localFunImages = allLocalImages.filter(image => {
-            return image.category === 'fun' || 
-                   (!image.category && image.path && image.path.includes('fun'));
-          });
-          
-          console.log(`🎮 Found ${localFunImages.length} fun images in localStorage`);
-          
-          localFunImages.forEach(image => {
-            const exists = funActivityImages.some(existing => 
-              existing.id === image.id || existing.url === image.url || existing.name === image.name
-            );
-            if (!exists) {
+          // Add fun images from localStorage
+          if (categorizedImages.fun && Array.isArray(categorizedImages.fun)) {
+            categorizedImages.fun.forEach(img => {
               funActivityImages.push({
-                ...image,
-                url: image.url || image.localUrl
+                ...img,
+                source: 'localStorage'
               });
+            });
+            console.log(`📱 Added ${categorizedImages.fun.length} fun images from localStorage`);
+          }
+          
+          // Also check general admin images for fun category
+          localImages.forEach(img => {
+            if (img.category === 'fun' || 
+                (img.name && img.name.toLowerCase().includes('fun'))) {
+              const exists = funActivityImages.some(existing => 
+                existing.id === img.id || existing.name === img.name || existing.url === img.url
+              );
+              if (!exists) {
+                funActivityImages.push({
+                  ...img,
+                  source: 'localStorage'
+                });
+              }
             }
           });
+          
         } catch (localError) {
           console.error('❌ Error loading from localStorage:', localError);
         }
@@ -55,23 +59,23 @@ const FunActivity = () => {
           const result = await getGalleryImages();
           console.log('🔍 getGalleryImages result:', result);
           
-          if (result.success && result.images && result.images.length > 0) {
-            const funFromService = result.images.filter(img => {
+          if (Array.isArray(result) && result.length > 0) {
+            const funFromService = result.filter(img => {
               const isFun = img.category === 'fun' || 
                            (img.name && img.name.toLowerCase().includes('fun')) ||
                            (img.path && img.path.toLowerCase().includes('fun'));
               if (isFun) {
-                console.log('🎮 Found fun image from service:', {
+                console.log('🎮 Found fun image from Firebase:', {
                   name: img.name,
                   category: img.category,
-                  source: img.source || 'unknown',
+                  source: img.source || 'firebase',
                   hasUrl: !!img.url
                 });
               }
               return isFun;
             });
             
-            console.log(`🎮 Fun images from service: ${funFromService.length}`);
+            console.log(`🎮 Fun images from Firebase: ${funFromService.length}`);
             
             // Merge with existing images, avoiding duplicates
             funFromService.forEach(img => {
@@ -87,8 +91,55 @@ const FunActivity = () => {
           console.error('❌ Error loading from getGalleryImages:', serviceError);
         }
 
-        setFunImages(funActivityImages);
-        console.log(`✅ FunActivity: Final count = ${funActivityImages.length} images`);
+        // Filter out images without valid URLs and remove duplicates
+        const validImages = funActivityImages.filter(img => {
+          const hasValidUrl = img.url && 
+                             img.url !== '' && 
+                             !img.id?.includes('temp_') &&
+                             !img.url.includes('undefined') &&
+                             (img.url.startsWith('http') || img.url.startsWith('data:'));
+          
+          if (!hasValidUrl) {
+            console.log('🚫 Filtering out invalid image:', {
+              id: img.id,
+              name: img.name,
+              url: img.url,
+              reason: 'Invalid or missing URL'
+            });
+          }
+          
+          return hasValidUrl;
+        });
+
+        // Remove duplicates based on name, url, or id
+        const uniqueImages = validImages.reduce((acc, current) => {
+          const isDuplicate = acc.find(img => 
+            (img.id && current.id && img.id === current.id) ||
+            (img.name && current.name && img.name === current.name) ||
+            (img.url && current.url && img.url === current.url)
+          );
+          if (!isDuplicate) {
+            acc.push(current);
+          }
+          return acc;
+        }, []);
+
+        // Sort by upload date (newest first)
+        uniqueImages.sort((a, b) => {
+          const dateA = new Date(a.uploadedAt || a.timestamp || 0);
+          const dateB = new Date(b.uploadedAt || b.timestamp || 0);
+          return dateB - dateA;
+        });
+
+        console.log('🎮 Final fun images count:', uniqueImages.length);
+        console.log('🎮 Fun images sources:', uniqueImages.map(img => ({
+          name: img.name,
+          category: img.category,
+          source: img.source,
+          hasUrl: !!img.url
+        })));
+
+        setFunImages(uniqueImages);
       } catch (error) {
         console.error('❌ Error loading fun activity images:', error);
       }
@@ -183,18 +234,18 @@ const FunActivity = () => {
                 </div>
               ) : (
                 funImages.map((image, index) => (
-                  <div key={image.id} className={`col-md-${index % 3 === 0 ? '6' : '3'} wow fadeInUp`} data-wow-delay={`${0.2 + (index * 0.2)}s`}>
+                  <div key={image.id} className="col-lg-4 col-md-6 col-sm-12 wow fadeInUp" data-wow-delay={`${0.2 + (index * 0.2)}s`}>
                     <div className="gallery-item position-relative">
                       <img 
                         src={image.url || image.path || `https://via.placeholder.com/400x300?text=${encodeURIComponent(image.name || 'Fun Activity')}`} 
-                        className="img-fluid rounded w-100 h-100" 
+                        className="img-fluid rounded w-100" 
                         alt={image.name || 'Fun Activity Image'}
                         onError={(e) => {
                           console.error('Image failed to load:', image);
                           e.target.src = `https://via.placeholder.com/400x300?text=${encodeURIComponent(image.name || 'Image Not Found')}`;
                         }}
                         style={{ 
-                          minHeight: '200px', 
+                          height: '250px', 
                           objectFit: 'cover',
                           backgroundColor: '#f8f9fa'
                         }}

@@ -3,8 +3,9 @@ import {
   uploadBytes, 
   getDownloadURL, 
   deleteObject, 
-  listAll 
-} from "firebase/storage";
+  listAll,
+  getMetadata 
+} from 'firebase/storage';
 import { 
   collection, 
   addDoc, 
@@ -26,96 +27,154 @@ try {
 }
 
 // Upload image to Firebase Storage
-export const uploadImage = async (file, folder = 'gallery') => {
+export const uploadImage = async (file, category = 'water') => {
   try {
-    if (!storage || !db) {
+    if (!storage) {
       return { success: false, error: "Firebase Storage not configured. Please set up your Firebase project." };
     }
 
     // Create unique filename
     const timestamp = Date.now();
-    const filename = `${timestamp}_${file.name}`;
-    const storageRef = ref(storage, `${folder}/${filename}`);
+    const randomId = Math.random().toString(36).substr(2, 6);
+    const ext = file.name.split('.').pop();
+    const filename = `${timestamp}_${randomId}.${ext}`;
+    const storageRef = ref(storage, `gallery/${category}/${filename}`);
 
-    // Upload file
+    console.log(`🔥 Uploading ${file.name} to Firebase Storage...`);
+
+    // Upload file to Firebase Storage
     const snapshot = await uploadBytes(storageRef, file);
     const downloadURL = await getDownloadURL(snapshot.ref);
 
-    // Save image metadata to Firestore
+    console.log(`✅ Upload successful: ${downloadURL}`);
+
+    // Return image data without Firestore dependency
     const imageData = {
+      id: `firebase_${timestamp}_${randomId}`,
       name: file.name,
       url: downloadURL,
       path: snapshot.ref.fullPath,
       size: file.size,
       type: file.type,
-      folder: folder,
-      uploadedAt: serverTimestamp()
+      category: category,
+      uploadedAt: new Date().toISOString(),
+      source: 'firebase'
     };
-
-    const docRef = await addDoc(collection(db, "gallery"), imageData);
 
     return { 
       success: true, 
-      imageId: docRef.id,
+      id: imageData.id,
       url: downloadURL,
+      path: snapshot.ref.fullPath,
       data: imageData
     };
   } catch (error) {
+    console.error('❌ Firebase upload error:', error);
     return { success: false, error: error.message };
   }
 };
 
-// Get all gallery images - localStorage ONLY (no Firebase dependency)
+// Get all gallery images from Firebase Storage with offline fallback
 export const getGalleryImages = async () => {
   try {
-    console.log('🔍 getGalleryImages: Loading from localStorage only...');
+    if (!storage) {
+      console.log('⚠️ Firebase Storage not available, falling back to localStorage');
+      return getLocalStorageImages();
+    }
+
+    console.log('🔍 getGalleryImages: Loading from Firebase Storage...');
+    
+    const allImages = [];
+    const categories = ['water', 'fun', 'garden'];
+    
+    // Add timeout for Firebase requests
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Firebase request timeout')), 10000)
+    );
+    
+    try {
+      // Fetch images from each category folder with timeout
+      for (const category of categories) {
+        try {
+          const categoryRef = ref(storage, `gallery/${category}`);
+          const result = await Promise.race([listAll(categoryRef), timeoutPromise]);
+          
+          console.log(`📁 Found ${result.items.length} items in ${category} category`);
+          
+          // Get download URLs for each image
+          for (const itemRef of result.items) {
+            try {
+              const downloadURL = await Promise.race([getDownloadURL(itemRef), timeoutPromise]);
+              const metadata = await Promise.race([getMetadata(itemRef), timeoutPromise]);
+              
+              const imageData = {
+                id: `firebase_${itemRef.name}`,
+                name: itemRef.name,
+                url: downloadURL,
+                path: itemRef.fullPath,
+                category: category,
+                size: metadata.size,
+                type: metadata.contentType,
+                uploadedAt: metadata.timeCreated,
+                source: 'firebase'
+              };
+              
+              allImages.push(imageData);
+            } catch (itemError) {
+              console.error(`❌ Error processing item ${itemRef.name}:`, itemError);
+            }
+          }
+        } catch (categoryError) {
+          console.error(`❌ Error loading ${category} category:`, categoryError);
+          // Continue with other categories even if one fails
+        }
+      }
+      
+      console.log(`📸 Loaded ${allImages.length} images from Firebase Storage`);
+      return allImages;
+    } catch (firebaseError) {
+      console.error('❌ Firebase Storage connection failed, falling back to localStorage:', firebaseError);
+      return getLocalStorageImages();
+    }
+  } catch (error) {
+    console.error('❌ Error loading gallery images, falling back to localStorage:', error);
+    return getLocalStorageImages();
+  }
+};
+
+// Fallback function to get images from localStorage
+const getLocalStorageImages = () => {
+  try {
+    console.log('📱 Loading images from localStorage fallback...');
     
     const localImages = JSON.parse(localStorage.getItem('adminGalleryImages') || '[]');
-    const categorizedImages = JSON.parse(localStorage.getItem('adminCategorizedImages') || '{"water":[],"fun":[],"garden":[]}');
+    const categorizedImages = JSON.parse(localStorage.getItem('adminCategorizedImages') || '{}');
     
-    console.log('📱 localStorage data:', {
-      adminGalleryImages: localImages.length,
-      water: categorizedImages.water?.length || 0,
-      fun: categorizedImages.fun?.length || 0,
-      garden: categorizedImages.garden?.length || 0
-    });
+    let allImages = [...localImages];
     
-    // Combine all local images
-    const allLocalImages = [
-      ...localImages,
-      ...(categorizedImages.water || []),
-      ...(categorizedImages.fun || []),
-      ...(categorizedImages.garden || [])
-    ];
-    
-    // Remove duplicates based on name or id
-    const uniqueLocalImages = allLocalImages.reduce((acc, current) => {
-      const exists = acc.find(img => 
-        img.id === current.id || 
-        img.name === current.name ||
-        img.url === current.url
-      );
-      if (!exists) {
-        acc.push(current);
+    // Add categorized images
+    Object.entries(categorizedImages).forEach(([category, categoryImages]) => {
+      if (Array.isArray(categoryImages)) {
+        categoryImages.forEach(img => {
+          allImages.push({
+            ...img,
+            category: category,
+            source: 'localStorage'
+          });
+        });
       }
-      return acc;
-    }, []);
-    
-    console.log(`📦 Found ${uniqueLocalImages.length} unique images in localStorage`);
-    
-    // Sort by upload date (newest first)
-    uniqueLocalImages.sort((a, b) => {
-      const dateA = new Date(a.uploadedAt || a.timestamp || 0);
-      const dateB = new Date(b.uploadedAt || b.timestamp || 0);
-      return dateB - dateA;
     });
     
-    console.log('✅ Returning localStorage images immediately');
-    return { success: true, images: uniqueLocalImages };
+    // Remove duplicates
+    const uniqueImages = allImages.filter((image, index, self) => 
+      index === self.findIndex(img => img.url === image.url || img.name === image.name)
+    );
     
+    console.log(`📱 Loaded ${uniqueImages.length} images from localStorage`);
+    return uniqueImages;
   } catch (error) {
-    console.error('❌ Error reading localStorage:', error);
-    return { success: false, error: error.message, images: [] };
+    console.error('❌ Error loading from localStorage:', error);
+    return [];
   }
 };
 

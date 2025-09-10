@@ -18,7 +18,7 @@ const Home = () => {
             <h1 className="display-6 text-dark"><i className="fas fa-swimmer text-primary me-3"></i>WaterLand</h1>
           </a>
           <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
-            <span className="fa fa-bars"></span>
+            <span className="fas fa-water"></span>
           </button>
           <div className="collapse navbar-collapse" id="navbarCollapse">
             <div className="navbar-nav mx-auto py-0">

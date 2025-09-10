@@ -22,6 +22,7 @@ import Register from './components/Register';
 import AdminLogin from './components/AdminLogin';
 import AdminDashboard from './components/AdminDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
+import ProtectedBookingRoute from './components/ProtectedBookingRoute';
 import WaterActivity from './components/WaterActivity';
 import FunActivity from './components/FunActivity';
 import GardenActivity from './components/GardenActivity';

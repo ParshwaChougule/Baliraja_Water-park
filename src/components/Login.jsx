@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { FaEnvelope, FaLock, FaEye, FaEyeSlash } from 'react-icons/fa';
-import { loginUser } from '../services/authService';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -15,6 +14,7 @@ const Login = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleInputChange = (e) => {
@@ -31,12 +31,12 @@ const Login = () => {
     setError('');
     setSuccess('');
 
-    const result = await loginUser(formData.email, formData.password);
+    const result = await login(formData.email, formData.password);
     
     if (result.success) {
-      setSuccess('Login successful! Redirecting...');
+      setSuccess('Login successful! Redirecting to booking...');
       setTimeout(() => {
-        navigate('/');
+        navigate('/booking');
       }, 1500);
     } else {
       setError(result.error);

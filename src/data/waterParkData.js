@@ -19,31 +19,101 @@ export const parkInfo = {
 export const services = [
   {
     id: 1,
-    title: "Private Gazebo",
-    description: "Enjoy exclusive private spaces with comfortable seating and shade for your family gatherings.",
-    icon: "gazebo",
-    image: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+    title: "Wave Pool",
+    description: "Experience the thrill of ocean waves in our artificial wave pool with safe and exciting water fun.",
+    icon: "water",
+    image: "/images/services/wavePool.jpg"
   },
   {
     id: 2,
-    title: "Delicious Food",
-    description: "Savor mouth-watering meals and refreshing beverages at our various food courts and restaurants.",
-    icon: "food",
-    image: "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+    title: "Waterpark",
+    description: "Complete waterpark experience with multiple pools, slides, and water attractions for all ages.",
+    icon: "water",
+    image: "/images/services/208A8215.JPG"
   },
   {
     id: 3,
-    title: "Safety Lockers",
-    description: "Secure storage facilities to keep your belongings safe while you enjoy the water attractions.",
-    icon: "locker",
-    image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+    title: "Puppet Show",
+    description: "Entertaining puppet shows for children with colorful characters and engaging stories.",
+    icon: "entertainment",
+    image: "https://images.unsplash.com/photo-1503095396549-807759245b35?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
   },
   {
     id: 4,
-    title: "River Rides",
-    description: "Experience thrilling water adventures on our exciting river rides and water coasters.",
-    icon: "water",
-    image: "https://images.unsplash.com/photo-1530549387789-4c1017266635?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+    title: "Water Slides",
+    description: "Thrilling water slides of various heights and speeds for an adrenaline-pumping experience.",
+    icon: "slide",
+    image: "/images/services/208A8210.JPG"
+  },
+  {
+    id: 5,
+    title: "Play Station",
+    description: "Gaming zone with various video games and entertainment options for kids and adults.",
+    icon: "gaming",
+    image: "https://images.unsplash.com/photo-1493711662062-fa541adb3fc8?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+  },
+  {
+    id: 6,
+    title: "DJ with Rain Dance",
+    description: "Dance under artificial rain with energetic DJ music and colorful lighting effects.",
+    icon: "music",
+    image: "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+  },
+  {
+    id: 7,
+    title: "Boating",
+    description: "Peaceful boating experience in our scenic water bodies with paddle boats and row boats.",
+    icon: "boat",
+    image: "/images/services/208A8257.JPG"
+  },
+  {
+    id: 8,
+    title: "Magic Show",
+    description: "Amazing magic performances with professional magicians creating wonder and excitement.",
+    icon: "magic",
+    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+  },
+  {
+    id: 9,
+    title: "Camel Cart",
+    description: "Traditional camel cart rides offering a unique cultural experience for the whole family.",
+    icon: "camel",
+    image: "/images/services/208A8004.JPG"
+  },
+  {
+    id: 10,
+    title: "Horse Cart",
+    description: "Enjoy scenic horse cart rides around the park with beautiful views and fresh air.",
+    icon: "horse",
+    image: "/images/services/208A8017.JPG"
+  },
+  {
+    id: 11,
+    title: "Playground Equipment",
+    description: "Safe and modern playground equipment including swings, slides, and climbing structures for kids.",
+    icon: "playground",
+    image: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+  },
+  {
+    id: 12,
+    title: "Amusement Games",
+    description: "Exciting amusement rides including Disco Coaster, Concord, and Vortex Tunnel for thrill seekers.",
+    icon: "rides",
+    image: "https://images.unsplash.com/photo-1517457373958-b7bdd4587205?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+  },
+  {
+    id: 13,
+    title: "Mickey Mouse Bouncy",
+    description: "Fun inflatable Mickey Mouse bouncy castle for kids to jump, play, and have endless fun.",
+    icon: "bouncy",
+    image: "https://images.unsplash.com/photo-1503095396549-807759245b35?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+  },
+  {
+    id: 14,
+    title: "Indoor & Outdoor Games",
+    description: "Wide variety of indoor and outdoor games including sports, board games, and recreational activities.",
+    icon: "games",
+    image: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
   }
 ];
 

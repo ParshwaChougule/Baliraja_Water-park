@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { onAuthStateChange, loginUser, registerUser, logoutUser } from '../services/authService';
 
 const AuthContext = createContext();
 
@@ -17,8 +18,8 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     // Check if Firebase is properly configured
     try {
-      const { onAuthStateChange } = require('../services/authService');
       const unsubscribe = onAuthStateChange((user) => {
+        console.log('🔥 Auth state changed:', user ? user.email : 'No user');
         setCurrentUser(user);
         setLoading(false);
       });
@@ -30,9 +31,41 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
+  // Register function without automatic login
+  const register = async (email, password, displayName) => {
+    const result = await registerUser(email, password, displayName);
+    if (result.success) {
+      console.log('✅ Registration successful');
+      // Logout the user after registration so they need to login manually
+      await logoutUser();
+    }
+    return result;
+  };
+
+  // Login function
+  const login = async (email, password) => {
+    const result = await loginUser(email, password);
+    if (result.success) {
+      console.log('✅ Login successful');
+    }
+    return result;
+  };
+
+  // Logout function
+  const logout = async () => {
+    const result = await logoutUser();
+    if (result.success) {
+      console.log('✅ Logout successful');
+    }
+    return result;
+  };
+
   const value = {
     currentUser,
-    loading
+    loading,
+    register,
+    login,
+    logout
   };
 
   return (

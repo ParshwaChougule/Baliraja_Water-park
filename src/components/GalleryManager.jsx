@@ -105,98 +105,96 @@ const GalleryManager = () => {
       };
 
       // Load from localStorage FIRST (priority for persistence)
-      let totalLocalImages = 0;
       try {
-        console.log('📱 GalleryManager: Loading from localStorage...');
+        console.log('💾 Loading from localStorage first...');
+        const adminImages = localStorage.getItem('adminGalleryImages');
+        const adminCategorizedImages = localStorage.getItem('adminCategorizedImages');
         
-        // Get raw localStorage data
-        const adminGalleryImagesRaw = localStorage.getItem('adminGalleryImages');
-        const adminCategorizedImagesRaw = localStorage.getItem('adminCategorizedImages');
+        if (adminCategorizedImages) {
+          const parsedCategorized = JSON.parse(adminCategorizedImages);
+          console.log('💾 Found categorized images in localStorage:', {
+            water: parsedCategorized.water?.length || 0,
+            fun: parsedCategorized.fun?.length || 0,
+            garden: parsedCategorized.garden?.length || 0
+          });
+          
+          // Load categorized images from localStorage
+          Object.keys(categorizedImages).forEach(category => {
+            if (parsedCategorized[category] && Array.isArray(parsedCategorized[category])) {
+              categorizedImages[category] = [...parsedCategorized[category]];
+            }
+          });
+        }
         
-        console.log('🔍 Raw localStorage data:', {
-          adminGalleryImages: adminGalleryImagesRaw ? 'EXISTS' : 'NULL',
-          adminCategorizedImages: adminCategorizedImagesRaw ? 'EXISTS' : 'NULL'
-        });
-        
-        const localImages = JSON.parse(adminGalleryImagesRaw || '[]');
-        const categorizedLocalImages = JSON.parse(adminCategorizedImagesRaw || '{"water":[],"fun":[],"garden":[]}');
-        
-        console.log('📊 Parsed localStorage data:', {
-          adminGalleryImages: localImages.length,
-          water: categorizedLocalImages.water?.length || 0,
-          fun: categorizedLocalImages.fun?.length || 0,
-          garden: categorizedLocalImages.garden?.length || 0
-        });
-        
-        // Process adminGalleryImages first
-        localImages.forEach(image => {
-          const category = image.category || 'water';
-          if (categorizedImages[category]) {
-            categorizedImages[category].push({
-              ...image,
-              source: image.source || 'local'
-            });
-            totalLocalImages++;
-          }
-        });
-        
-        // Process adminCategorizedImages
-        Object.entries(categorizedLocalImages).forEach(([category, images]) => {
-          if (images && Array.isArray(images)) {
-            images.forEach(image => {
-              // Check if not already added from adminGalleryImages
+        // Also check general admin images for any additional images
+        if (adminImages) {
+          const parsedAdminImages = JSON.parse(adminImages);
+          console.log('💾 Found admin images in localStorage:', parsedAdminImages.length);
+          
+          parsedAdminImages.forEach(img => {
+            const category = img.category || 'water';
+            if (categorizedImages[category]) {
+              // Check if image already exists to avoid duplicates
               const exists = categorizedImages[category].some(existing => 
-                existing.id === image.id || existing.url === image.url
+                existing.id === img.id || existing.name === img.name
               );
               if (!exists) {
                 categorizedImages[category].push({
-                  ...image,
-                  source: image.source || 'local'
+                  ...img,
+                  source: 'localStorage'
                 });
-                totalLocalImages++;
               }
-            });
-          }
-        });
-
-        console.log(`📦 Total local images loaded: ${totalLocalImages}`);
-        console.log('📋 Images per category:', {
+            }
+          });
+        }
+        
+        console.log('💾 localStorage images loaded:', {
           water: categorizedImages.water.length,
           fun: categorizedImages.fun.length,
           garden: categorizedImages.garden.length
         });
-        
-      } catch (localError) {
-        console.error('❌ localStorage load failed:', localError);
+      } catch (localStorageError) {
+        console.error('❌ Error loading from localStorage:', localStorageError);
       }
 
-      // Load from Firebase as secondary (don't overwrite local)
+      // Then load from Firebase Storage as backup/additional source
       try {
-        console.log('🔥 Loading from Firebase...');
-        const firebaseResult = await getGalleryImages();
-        if (firebaseResult.success && firebaseResult.images.length > 0) {
-          console.log(`🔥 Firebase images found: ${firebaseResult.images.length}`);
-          
-          firebaseResult.images.forEach(image => {
-            const category = image.category || 'water';
+        console.log('🔥 Loading from Firebase Storage...');
+        const result = await getGalleryImages();
+        console.log('🔥 Firebase result:', result);
+        
+        if (Array.isArray(result) && result.length > 0) {
+          result.forEach(img => {
+            const category = img.category || 'water';
             if (categorizedImages[category]) {
-              // Only add if not already exists from localStorage
+              // Check if image already exists to avoid duplicates
               const exists = categorizedImages[category].some(existing => 
-                existing.id === image.id || existing.name === image.name
+                existing.id === img.id || existing.url === img.url
               );
               if (!exists) {
                 categorizedImages[category].push({
-                  ...image,
+                  ...img,
                   source: 'firebase'
                 });
               }
             }
           });
+          
+          console.log('🔥 Firebase images loaded:', {
+            water: categorizedImages.water.length,
+            fun: categorizedImages.fun.length,
+            garden: categorizedImages.garden.length
+          });
         } else {
-          console.log('🔥 No Firebase images found');
+          console.log('📷 No images found in Firebase Storage');
         }
       } catch (firebaseError) {
-        console.warn('⚠️ Firebase load failed:', firebaseError);
+        console.error('❌ Error loading from Firebase:', firebaseError);
+        // Don't show error if we have localStorage images
+        const hasLocalImages = Object.values(categorizedImages).some(arr => arr.length > 0);
+        if (!hasLocalImages) {
+          setError(`Failed to load images from Firebase: ${firebaseError.message}`);
+        }
       }
 
       // Sort images by upload date (newest first)
@@ -224,11 +222,6 @@ const GalleryManager = () => {
         setError(''); // Clear any previous errors
       } else {
         setSuccess('📷 No images found. Upload some images to get started.');
-        // Check if localStorage has data but we couldn't load it
-        const hasLocalData = localStorage.getItem('adminGalleryImages') || localStorage.getItem('adminCategorizedImages');
-        if (hasLocalData) {
-          setError('⚠️ Found localStorage data but failed to load images. Check console for details.');
-        }
       }
 
     } catch (err) {
@@ -335,173 +328,92 @@ const GalleryManager = () => {
     setUploadProgress(0);
 
     try {
-      setUploadProgress(20);
-      setSuccess('⚡ Compressing and uploading...');
+      setUploadProgress(10);
+      setSuccess('🔥 Uploading original images to Firebase Storage...');
       
-      // Compress and create images with proper error handling
-      const compressedImages = [];
+      const uploadedImages = [];
       
       for (let i = 0; i < selectedFiles.length; i++) {
         const file = selectedFiles[i];
         try {
-          console.log(`🔄 Compressing image ${i + 1}/${selectedFiles.length}: ${file.name}`);
-          const compressedDataUrl = await compressImageForStorage(file, 300, 0.5);
+          console.log(`🔄 Uploading image ${i + 1}/${selectedFiles.length}: ${file.name}`);
+          setUploadProgress(10 + (i / selectedFiles.length) * 70);
           
-          // Validate that we got a proper base64 data URL
-          if (compressedDataUrl && compressedDataUrl.startsWith('data:image/')) {
-            compressedImages.push({
-              id: `local_${Date.now()}_${i}`,
+          // Upload original image to Firebase Storage
+          const result = await uploadImage(file, selectedCategory);
+          
+          if (result.success && result.url) {
+            uploadedImages.push({
+              id: result.id || `firebase_${Date.now()}_${i}`,
               name: file.name,
               size: file.size,
               type: file.type,
               category: selectedCategory,
               uploadedAt: new Date().toISOString(),
               uploading: false,
-              localUrl: compressedDataUrl,
-              url: compressedDataUrl,
-              source: 'local',
-              compressed: true
+              url: result.url,
+              path: result.path,
+              source: 'firebase',
+              compressed: false
             });
-            console.log(`✅ Successfully compressed: ${file.name}`);
+            console.log(`✅ Successfully uploaded to Firebase: ${file.name}`);
           } else {
-            console.error(`❌ Invalid compressed data for: ${file.name}`);
-            setError(`Failed to compress image: ${file.name}`);
+            console.error(`❌ Firebase upload failed for: ${file.name}`, result.error);
+            setError(`Failed to upload image: ${file.name} - ${result.error || 'Unknown error'}`);
           }
-        } catch (compressionError) {
-          console.error(`❌ Compression failed for ${file.name}:`, compressionError);
-          setError(`Failed to process image: ${file.name}`);
+        } catch (uploadError) {
+          console.error(`❌ Upload failed for ${file.name}:`, uploadError);
+          setError(`Failed to upload image: ${file.name}`);
         }
       }
       
-      if (compressedImages.length === 0) {
-        setError('No images were successfully processed. Please try again.');
+      if (uploadedImages.length === 0) {
+        setError('No images were successfully uploaded. Please try again.');
         setUploading(false);
         return;
       }
       
-      console.log(`✅ Successfully compressed ${compressedImages.length}/${selectedFiles.length} images`);
+      console.log(`✅ Successfully uploaded ${uploadedImages.length}/${selectedFiles.length} images to Firebase`);
       
       setImages(prevImages => ({
         ...prevImages,
-        [selectedCategory]: [...compressedImages, ...prevImages[selectedCategory]]
+        [selectedCategory]: [...uploadedImages, ...prevImages[selectedCategory]]
       }));
       
-      // Save compressed images to localStorage
+      // Save to localStorage for persistence (CRITICAL for refresh persistence)
       try {
-        console.log('💾 Starting localStorage save with compressed images...');
+        // Save to general admin gallery
+        const existingImages = JSON.parse(localStorage.getItem('adminGalleryImages') || '[]');
+        const updatedImages = [...uploadedImages, ...existingImages];
+        localStorage.setItem('adminGalleryImages', JSON.stringify(updatedImages));
         
-        // Aggressive localStorage cleanup to make space
-        const cleanupStorage = () => {
-          console.log('🧹 Cleaning localStorage to make space...');
-          try {
-            // Clear old images more aggressively
-            const existingImages = JSON.parse(localStorage.getItem('adminGalleryImages') || '[]');
-            const recentImages = existingImages.slice(-5); // Keep only last 5 images total
-            localStorage.setItem('adminGalleryImages', JSON.stringify(recentImages));
-            
-            // Clean categorized images - keep very few per category
-            const existingCategorized = JSON.parse(localStorage.getItem('adminCategorizedImages') || '{"water":[],"fun":[],"garden":[]}');
-            Object.keys(existingCategorized).forEach(category => {
-              existingCategorized[category] = existingCategorized[category].slice(-3); // Keep only 3 per category
-            });
-            localStorage.setItem('adminCategorizedImages', JSON.stringify(existingCategorized));
-            
-            // Clear other potential localStorage items
-            const keysToCheck = ['galleryImages', 'tempImages', 'uploadCache'];
-            keysToCheck.forEach(key => {
-              if (localStorage.getItem(key)) {
-                localStorage.removeItem(key);
-                console.log(`🗑️ Cleared ${key}`);
-              }
-            });
-            
-            console.log('✅ Aggressive cleanup completed');
-            return true;
-          } catch (error) {
-            console.error('❌ Cleanup failed:', error);
-            return false;
-          }
-        };
+        // Save to categorized storage (PRIMARY source for persistence)
+        const existingCategorizedImages = JSON.parse(localStorage.getItem('adminCategorizedImages') || '{"water":[],"fun":[],"garden":[]}');
+        existingCategorizedImages[selectedCategory] = [...uploadedImages, ...(existingCategorizedImages[selectedCategory] || [])];
+        localStorage.setItem('adminCategorizedImages', JSON.stringify(existingCategorizedImages));
         
-        // Always clean up first to make space
-        cleanupStorage();
-        
-        // Initialize variables for storage events
-        let updatedImages = [];
-        let existingCategorizedImages = {"water":[],"fun":[],"garden":[]};
-        
-        // Try to save with error handling for quota exceeded
-        try {
-          // Save to adminGalleryImages
-          const existingImages = JSON.parse(localStorage.getItem('adminGalleryImages') || '[]');
-          updatedImages = [...compressedImages, ...existingImages];
-          localStorage.setItem('adminGalleryImages', JSON.stringify(updatedImages));
-          console.log(`💾 Saved ${compressedImages.length} compressed images. Total: ${updatedImages.length}`);
-          
-          // Save to adminCategorizedImages
-          existingCategorizedImages = JSON.parse(localStorage.getItem('adminCategorizedImages') || '{"water":[],"fun":[],"garden":[]}');
-          existingCategorizedImages[selectedCategory] = [...compressedImages, ...existingCategorizedImages[selectedCategory]];
-          localStorage.setItem('adminCategorizedImages', JSON.stringify(existingCategorizedImages));
-          console.log(`💾 Saved to ${selectedCategory} category. Total: ${existingCategorizedImages[selectedCategory].length}`);
-        } catch (quotaError) {
-          console.error('❌ Still getting quota error, trying emergency cleanup...');
-          // Emergency cleanup - clear everything and save only new images
-          localStorage.removeItem('adminGalleryImages');
-          localStorage.removeItem('adminCategorizedImages');
-          
-          // Save only the new images
-          updatedImages = compressedImages;
-          localStorage.setItem('adminGalleryImages', JSON.stringify(updatedImages));
-          const newCategorized = {"water":[],"fun":[],"garden":[]};
-          newCategorized[selectedCategory] = compressedImages;
-          existingCategorizedImages = newCategorized;
-          localStorage.setItem('adminCategorizedImages', JSON.stringify(existingCategorizedImages));
-          console.log('🚨 Emergency cleanup completed - saved only new images');
-        }
-        
-        // Trigger update events
-        console.log('📡 Triggering adminGalleryUpdate event...');
-        window.dispatchEvent(new CustomEvent('adminGalleryUpdate', {
-          detail: {
-            category: selectedCategory,
-            imageCount: compressedImages.length,
-            timestamp: Date.now()
-          }
-        }));
-        
-        // Also trigger storage events manually for cross-component sync
-        setTimeout(() => {
-          window.dispatchEvent(new StorageEvent('storage', {
-            key: 'adminGalleryImages',
-            newValue: JSON.stringify(updatedImages),
-            storageArea: localStorage
-          }));
-          
-          window.dispatchEvent(new StorageEvent('storage', {
-            key: 'adminCategorizedImages', 
-            newValue: JSON.stringify(existingCategorizedImages),
-            storageArea: localStorage
-          }));
-        }, 50);
+        console.log(`💾 PERSISTENCE: Saved ${uploadedImages.length} images to localStorage for category: ${selectedCategory}`);
+        console.log('💾 PERSISTENCE: Updated localStorage data:', {
+          totalAdminImages: updatedImages.length,
+          categoryImages: existingCategorizedImages[selectedCategory].length
+        });
       } catch (storageError) {
-        console.error('❌ localStorage save error:', storageError);
-        console.error('Error details:', storageError.stack);
+        console.error('❌ CRITICAL: Error saving to localStorage (images will be lost on refresh):', storageError);
+        setError('Warning: Images uploaded but may be lost on refresh due to storage error.');
       }
       
-      // Finalize images as localStorage-only (no Firebase)
-      setTimeout(() => {
-        setImages(prevImages => ({
-          ...prevImages,
-          [selectedCategory]: prevImages[selectedCategory].map(img => 
-            img.uploading ? { ...img, uploading: false, source: 'local' } : img
-          )
-        }));
-        
-        console.log('✅ Images saved to localStorage successfully');
-      }, 500);
+      // Trigger update events for real-time sync
+      console.log('📡 Triggering adminGalleryUpdate event...');
+      window.dispatchEvent(new CustomEvent('adminGalleryUpdate', {
+        detail: {
+          category: selectedCategory,
+          imageCount: uploadedImages.length,
+          timestamp: Date.now()
+        }
+      }));
       
       setUploadProgress(100);
-      setSuccess(`✅ ${selectedFiles.length} image(s) uploaded successfully to localStorage!`);
+      setSuccess(`✅ ${uploadedImages.length} image(s) uploaded successfully to Firebase Storage!`);
       setSelectedFiles([]);
 
     } catch (err) {

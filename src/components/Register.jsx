@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { FaUser, FaEnvelope, FaLock, FaEye, FaEyeSlash } from 'react-icons/fa';
-import { registerUser } from '../services/authService';
+import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 const Register = () => {
@@ -17,6 +17,7 @@ const Register = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   
+  const { register } = useAuth();
   const navigate = useNavigate();
 
   const handleInputChange = (e) => {
@@ -46,12 +47,12 @@ const Register = () => {
       return;
     }
 
-    const result = await registerUser(formData.email, formData.password, formData.name);
+    const result = await register(formData.email, formData.password, formData.name);
     
     if (result.success) {
-      setSuccess('Account created successfully! Redirecting...');
+      setSuccess('Account created successfully! Please login to continue...');
       setTimeout(() => {
-        navigate('/');
+        navigate('/login');
       }, 1500);
     } else {
       setError(result.error);

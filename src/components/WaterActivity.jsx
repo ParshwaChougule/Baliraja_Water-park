@@ -14,74 +14,69 @@ const WaterActivity = () => {
       
       let waterActivityImages = [];
 
-      // Load from localStorage first (admin uploads)
+      // Load from localStorage first (admin uploaded images)
       try {
-        const adminImages = localStorage.getItem('adminGalleryImages');
-        const adminCategorizedImages = localStorage.getItem('adminCategorizedImages');
+        const localImages = JSON.parse(localStorage.getItem('adminGalleryImages') || '[]');
+        const categorizedImages = JSON.parse(localStorage.getItem('adminCategorizedImages') || '{}');
         
-        console.log('📱 localStorage data found:', {
-          adminImages: adminImages ? 'YES' : 'NO',
-          adminCategorizedImages: adminCategorizedImages ? 'YES' : 'NO'
-        });
+        console.log('📱 localStorage adminGalleryImages:', localImages.length);
+        console.log('📱 localStorage categorizedImages:', categorizedImages);
         
-        if (adminImages) {
-          const parsedAdminImages = JSON.parse(adminImages);
-          console.log('📱 Total admin images:', parsedAdminImages.length);
-          
-          // Filter for water category images
-          const waterFromAdmin = parsedAdminImages.filter(img => {
-            const isWater = img.category === 'water' || 
-                           (img.name && img.name.toLowerCase().includes('water')) ||
-                           (img.path && img.path.toLowerCase().includes('water'));
-            if (isWater) {
-              console.log('🌊 Found water image from admin:', {
-                name: img.name,
-                category: img.category,
-                source: img.source || 'admin',
-                hasUrl: !!img.url
+        // Add water images from localStorage
+        if (categorizedImages.water && Array.isArray(categorizedImages.water)) {
+          categorizedImages.water.forEach(img => {
+            waterActivityImages.push({
+              ...img,
+              source: 'localStorage'
+            });
+          });
+          console.log(`📱 Added ${categorizedImages.water.length} water images from localStorage`);
+        }
+        
+        // Also check general admin images for water category
+        localImages.forEach(img => {
+          if (img.category === 'water' || 
+              (img.name && img.name.toLowerCase().includes('water'))) {
+            const exists = waterActivityImages.some(existing => 
+              existing.id === img.id || existing.name === img.name || existing.url === img.url
+            );
+            if (!exists) {
+              waterActivityImages.push({
+                ...img,
+                source: 'localStorage'
               });
             }
-            return isWater;
-          });
-          
-          waterActivityImages = [...waterActivityImages, ...waterFromAdmin];
-          console.log('🌊 Water images from localStorage:', waterFromAdmin.length);
-        }
-        
-        if (adminCategorizedImages) {
-          const parsedCategorized = JSON.parse(adminCategorizedImages);
-          if (parsedCategorized.water && Array.isArray(parsedCategorized.water)) {
-            console.log('🌊 Water category images from localStorage:', parsedCategorized.water.length);
-            waterActivityImages = [...waterActivityImages, ...parsedCategorized.water];
           }
-        }
-      } catch (localStorageError) {
-        console.error('❌ Error reading from localStorage:', localStorageError);
+        });
+        
+      } catch (localError) {
+        console.error('❌ Error loading from localStorage:', localError);
       }
 
-      // Load from getGalleryImages (which now prioritizes localStorage)
+      // Load from Firebase Storage via getGalleryImages
       try {
         console.log('🔍 Loading from getGalleryImages...');
         const result = await getGalleryImages();
         console.log('🔍 getGalleryImages result:', result);
         
-        if (result.success && result.images && result.images.length > 0) {
-          const waterFromService = result.images.filter(img => {
+        // getGalleryImages now returns an array directly
+        if (Array.isArray(result) && result.length > 0) {
+          const waterFromService = result.filter(img => {
             const isWater = img.category === 'water' || 
                            (img.name && img.name.toLowerCase().includes('water')) ||
                            (img.path && img.path.toLowerCase().includes('water'));
             if (isWater) {
-              console.log('🌊 Found water image from service:', {
+              console.log('🌊 Found water image from Firebase:', {
                 name: img.name,
                 category: img.category,
-                source: img.source || 'unknown',
+                source: img.source || 'firebase',
                 hasUrl: !!img.url
               });
             }
             return isWater;
           });
           
-          console.log(`🌊 Water images from service: ${waterFromService.length}`);
+          console.log(`🌊 Water images from Firebase: ${waterFromService.length}`);
           
           // Merge with existing images, avoiding duplicates
           waterFromService.forEach(img => {
@@ -97,9 +92,10 @@ const WaterActivity = () => {
         console.error('❌ Error loading from getGalleryImages:', serviceError);
       }
 
-      // Remove duplicates based on name or url
+      // Remove duplicates based on name, url, or id
       const uniqueImages = waterActivityImages.reduce((acc, current) => {
         const isDuplicate = acc.find(img => 
+          (img.id && current.id && img.id === current.id) ||
           (img.name && current.name && img.name === current.name) ||
           (img.url && current.url && img.url === current.url)
         );
@@ -109,8 +105,15 @@ const WaterActivity = () => {
         return acc;
       }, []);
 
+      // Sort by upload date (newest first)
+      uniqueImages.sort((a, b) => {
+        const dateA = new Date(a.uploadedAt || a.timestamp || 0);
+        const dateB = new Date(b.uploadedAt || b.timestamp || 0);
+        return dateB - dateA;
+      });
+
       console.log('🌊 Final water images count:', uniqueImages.length);
-      console.log('🌊 Water images:', uniqueImages.map(img => ({
+      console.log('🌊 Water images sources:', uniqueImages.map(img => ({
         name: img.name,
         category: img.category,
         source: img.source,
@@ -248,11 +251,11 @@ const WaterActivity = () => {
           ) : (
             <div className="row g-4">
               {waterImages.map((image, index) => (
-                <div key={image.id || index} className="col-lg-4 col-md-6 wow fadeInUp" data-wow-delay="0.2s">
+                <div key={image.id || index} className="col-lg-4 col-md-6 col-sm-12 wow fadeInUp" data-wow-delay="0.2s">
                   <div className="gallery-item position-relative overflow-hidden rounded">
                     <img 
                       src={image.url || image.path || `https://via.placeholder.com/400x300?text=${encodeURIComponent(image.name || 'Water Activity')}`}
-                      className="img-fluid rounded w-100 h-100" 
+                      className="img-fluid rounded w-100" 
                       alt={image.name || 'Water Activity Image'}
                       onError={(e) => {
                         console.error('❌ Image failed to load:', {
@@ -265,7 +268,7 @@ const WaterActivity = () => {
                         e.target.src = `https://via.placeholder.com/400x300?text=${encodeURIComponent(image.name || 'Image Not Found')}`;
                       }}
                       style={{ 
-                        minHeight: '200px', 
+                        height: '250px', 
                         objectFit: 'cover',
                         backgroundColor: '#f8f9fa'
                       }}

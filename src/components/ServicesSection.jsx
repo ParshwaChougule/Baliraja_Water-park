@@ -1,5 +1,5 @@
 import React from 'react';
-import { Container, Row, Col, Card, Button } from 'react-bootstrap';
+import { Container, Row, Col, Card, Button, Carousel } from 'react-bootstrap';
 import { FaUmbrella, FaUtensils, FaLock, FaWater } from 'react-icons/fa';
 import { services } from '../data/waterParkData';
 
@@ -33,12 +33,27 @@ const ServicesSection = () => {
             <Col lg={6} xl={3} key={service.id}>
               <Card className="h-100 border-0 shadow-sm service-card">
                 <div className="service-image-wrapper position-relative overflow-hidden">
-                  <Card.Img 
-                    variant="top" 
-                    src={service.image} 
-                    alt={service.title}
-                    style={{ height: '200px', objectFit: 'cover' }}
-                  />
+                  {service.carousel ? (
+                    <Carousel interval={3000} controls={true} indicators={true}>
+                      {service.carousel.map((image, index) => (
+                        <Carousel.Item key={index}>
+                          <img
+                            className="d-block w-100"
+                            src={image}
+                            alt={`${service.title} ${index + 1}`}
+                            style={{ height: '200px', objectFit: 'cover' }}
+                          />
+                        </Carousel.Item>
+                      ))}
+                    </Carousel>
+                  ) : (
+                    <Card.Img 
+                      variant="top" 
+                      src={service.image} 
+                      alt={service.title}
+                      style={{ height: '200px', objectFit: 'cover' }}
+                    />
+                  )}
                   <div className="service-overlay position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center">
                     <div className="service-icon bg-primary text-white rounded-circle d-flex align-items-center justify-content-center"
                          style={{ width: '60px', height: '60px', fontSize: '24px' }}>

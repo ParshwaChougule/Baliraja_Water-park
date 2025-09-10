@@ -3,14 +3,13 @@ import { Navbar, Nav, Container, Button, NavDropdown } from 'react-bootstrap';
 import { LinkContainer } from 'react-router-bootstrap';
 import { FaUser, FaSignOutAlt, FaChartLine, FaPhone, FaEnvelope, FaClock, FaMapMarkerAlt } from 'react-icons/fa';
 import { useAuth } from '../contexts/AuthContext';
-import { logoutUser } from '../services/authService';
 import { parkInfo } from '../data/waterParkData';
 
 const Header = () => {
-  const { currentUser } = useAuth();
+  const { currentUser, logout } = useAuth();
 
   const handleLogout = async () => {
-    await logoutUser();
+    await logout();
   };
 
   return (
@@ -142,11 +141,6 @@ const Header = () => {
                   <LinkContainer to="/login">
                     <Button variant="outline-secondary" size="sm">
                       Login
-                    </Button>
-                  </LinkContainer>
-                  <LinkContainer to="/register">
-                    <Button variant="success" size="sm">
-                      Sign Up
                     </Button>
                   </LinkContainer>
                 </div>

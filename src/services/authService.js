@@ -54,9 +54,13 @@ export const loginUser = async (email, password) => {
       return { success: false, error: "Firebase Authentication is not properly configured. Please enable Authentication in your Firebase Console." };
     }
     
+    console.log('🔥 Attempting login with email:', email);
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    console.log('✅ Login successful for:', userCredential.user.email);
     return { success: true, user: userCredential.user };
   } catch (error) {
+    console.error('❌ Login error:', error.code, error.message);
+    
     // Handle specific Firebase Auth errors
     let errorMessage = error.message;
     if (error.code === 'auth/user-not-found') {
@@ -65,6 +69,8 @@ export const loginUser = async (email, password) => {
       errorMessage = "Incorrect password. Please check your password and try again.";
     } else if (error.code === 'auth/invalid-email') {
       errorMessage = "Please enter a valid email address.";
+    } else if (error.code === 'auth/invalid-credential') {
+      errorMessage = "Invalid email or password. Please check your credentials and try again.";
     } else if (error.code === 'auth/user-disabled') {
       errorMessage = "This account has been disabled. Please contact support.";
     } else if (error.code === 'auth/too-many-requests') {

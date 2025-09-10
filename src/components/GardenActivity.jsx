@@ -10,53 +10,59 @@ const GardenActivity = () => {
   const loadGardenImages = async () => {
     try {
       console.log('🌿 GardenActivity: Loading images...');
-      console.log('🔍 Current localStorage contents:');
-      console.log('adminGalleryImages:', localStorage.getItem('adminGalleryImages'));
-      console.log('adminCategorizedImages:', localStorage.getItem('adminCategorizedImages'));
       
       let gardenActivityImages = [];
 
       // Load from localStorage first (admin uploads)
       try {
-        const localImages = JSON.parse(localStorage.getItem('adminGalleryImages') || '[]');
-        const categorizedImages = JSON.parse(localStorage.getItem('adminCategorizedImages') || '{"water":[],"fun":[],"garden":[]}');
+        const adminImages = localStorage.getItem('adminGalleryImages');
+        const adminCategorizedImages = localStorage.getItem('adminCategorizedImages');
         
-        console.log('📱 LocalStorage check:', {
-          adminGalleryImages: localImages.length,
-          gardenCategoryImages: categorizedImages.garden ? categorizedImages.garden.length : 0
+        console.log('📱 localStorage data found:', {
+          adminImages: adminImages ? 'YES' : 'NO',
+          adminCategorizedImages: adminCategorizedImages ? 'YES' : 'NO'
         });
         
-        // Get garden images from both sources
-        const allLocalImages = [...localImages, ...(categorizedImages.garden || [])];
-        
-        const localGardenImages = allLocalImages.filter(image => {
-          return image.category === 'garden' || 
-                 (!image.category && image.path && image.path.includes('garden'));
-        });
-        
-        console.log(`🌿 Found ${localGardenImages.length} garden images in localStorage`);
-        
-        // Show detailed info about found images
-        localGardenImages.forEach((img, index) => {
-          console.log(`🔍 Garden image ${index + 1}:`, {
-            name: img.name,
-            category: img.category,
-            hasUrl: !!img.url,
-            source: img.source
-          });
-        });
-        
-        localGardenImages.forEach(image => {
-          const exists = gardenActivityImages.some(existing => 
-            existing.id === image.id || existing.url === image.url || existing.name === image.name
-          );
-          if (!exists) {
-            gardenActivityImages.push({
-              ...image,
-              url: image.url || image.localUrl
-            });
+        // Load from adminCategorizedImages first (primary source)
+        if (adminCategorizedImages) {
+          const parsedCategorized = JSON.parse(adminCategorizedImages);
+          if (parsedCategorized.garden && Array.isArray(parsedCategorized.garden)) {
+            console.log('🌿 Garden category images from localStorage:', parsedCategorized.garden.length);
+            gardenActivityImages = [...parsedCategorized.garden];
           }
-        });
+        }
+        
+        // Also check adminGalleryImages for garden category
+        if (adminImages) {
+          const parsedAdminImages = JSON.parse(adminImages);
+          console.log('📱 Total admin images:', parsedAdminImages.length);
+          
+          // Filter for garden category images
+          const gardenFromAdmin = parsedAdminImages.filter(img => {
+            const isGarden = img.category === 'garden';
+            if (isGarden) {
+              console.log('🌿 Found garden image from admin:', {
+                name: img.name,
+                category: img.category,
+                source: img.source || 'admin',
+                hasUrl: !!img.url
+              });
+            }
+            return isGarden;
+          });
+          
+          // Merge avoiding duplicates
+          gardenFromAdmin.forEach(img => {
+            const exists = gardenActivityImages.some(existing => 
+              existing.id === img.id || existing.name === img.name || existing.url === img.url
+            );
+            if (!exists) {
+              gardenActivityImages.push(img);
+            }
+          });
+          
+          console.log('🌿 Garden images from adminGalleryImages:', gardenFromAdmin.length);
+        }
       } catch (localError) {
         console.error('❌ Error loading from localStorage:', localError);
       }
@@ -67,8 +73,8 @@ const GardenActivity = () => {
         const result = await getGalleryImages();
         console.log('🔍 getGalleryImages result:', result);
         
-        if (result.success && result.images && result.images.length > 0) {
-          const gardenFromService = result.images.filter(img => {
+        if (Array.isArray(result) && result.length > 0) {
+          const gardenFromService = result.filter(img => {
             const isGarden = img.category === 'garden' || 
                            (img.name && img.name.toLowerCase().includes('garden')) ||
                            (img.path && img.path.toLowerCase().includes('garden'));
@@ -82,8 +88,28 @@ const GardenActivity = () => {
             }
             return isGarden;
           });
-          
-          console.log(`🌿 Garden images from service: ${gardenFromService.length}`);
+
+          // Filter out images without valid URLs and remove duplicates
+          const validImages = gardenFromService.filter(img => {
+            const hasValidUrl = img.url && 
+                               img.url !== '' && 
+                               !img.url.includes('temp_') &&
+                               !img.url.includes('undefined') &&
+                               (img.url.startsWith('http') || img.url.startsWith('data:'));
+            
+            if (!hasValidUrl) {
+              console.log('🚫 Filtering out invalid image:', {
+                id: img.id,
+                name: img.name,
+                url: img.url,
+                reason: 'Invalid or missing URL'
+              });
+            }
+            
+            return hasValidUrl;
+          });
+
+          console.log(`🌿 Garden images from Firebase: ${gardenFromService.length}`);
           
           // Merge with existing images, avoiding duplicates
           gardenFromService.forEach(img => {
@@ -99,13 +125,46 @@ const GardenActivity = () => {
         console.error('❌ Error loading from getGalleryImages:', serviceError);
       }
 
-      setGardenImages(gardenActivityImages);
-      console.log(`✅ GardenActivity: Final count = ${gardenActivityImages.length} images`);
+      // Filter out images without valid URLs and remove duplicates
+      const validImages = gardenActivityImages.filter(img => {
+        const hasValidUrl = img.url && 
+                           img.url !== '' && 
+                           !img.id?.includes('temp_') &&
+                           !img.url.includes('undefined') &&
+                           (img.url.startsWith('http') || img.url.startsWith('data:'));
+        
+        if (!hasValidUrl) {
+          console.log('🚫 Filtering out invalid image:', {
+            id: img.id,
+            name: img.name,
+            url: img.url,
+            reason: 'Invalid or missing URL'
+          });
+        }
+        
+        return hasValidUrl;
+      });
+
+      // Remove duplicates based on name, url, or id
+      const uniqueImages = validImages.reduce((acc, current) => {
+        const isDuplicate = acc.find(img => 
+          (img.id && current.id && img.id === current.id) ||
+          (img.name && current.name && img.name === current.name) ||
+          (img.url && current.url && img.url === current.url)
+        );
+        if (!isDuplicate) {
+          acc.push(current);
+        }
+        return acc;
+      }, []);
+
+      setGardenImages(uniqueImages);
+      console.log(`✅ GardenActivity: Final count = ${uniqueImages.length} images`);
       
       // Force immediate UI update if we have images
-      if (gardenActivityImages.length > 0) {
+      if (uniqueImages.length > 0) {
         console.log('🚀 GardenActivity: Forcing immediate UI update with images');
-        setGardenImages([...gardenActivityImages]); // Force re-render
+        setGardenImages([...uniqueImages]); // Force re-render
       }
     } catch (error) {
       console.error('❌ Error loading garden activity images:', error);
@@ -260,18 +319,18 @@ const GardenActivity = () => {
                 </div>
               ) : (
                 gardenImages.map((image, index) => (
-                  <div key={image.id} className={`col-md-${index % 3 === 0 ? '6' : '3'} wow fadeInUp`} data-wow-delay={`${0.2 + (index * 0.2)}s`}>
+                  <div key={image.id} className="col-lg-4 col-md-6 col-sm-12 wow fadeInUp" data-wow-delay={`${0.2 + (index * 0.2)}s`}>
                     <div className="gallery-item position-relative">
                       <img 
                         src={image.url || image.path || `https://via.placeholder.com/400x300?text=${encodeURIComponent(image.name || 'Garden Activity')}`} 
-                        className="img-fluid rounded w-100 h-100" 
+                        className="img-fluid rounded w-100" 
                         alt={image.name || 'Garden Activity Image'}
                         onError={(e) => {
                           console.error('Image failed to load:', image);
                           e.target.src = `https://via.placeholder.com/400x300?text=${encodeURIComponent(image.name || 'Image Not Found')}`;
                         }}
                         style={{ 
-                          minHeight: '200px', 
+                          height: '250px', 
                           objectFit: 'cover',
                           backgroundColor: '#f8f9fa'
                         }}
