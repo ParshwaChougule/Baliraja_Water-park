@@ -778,69 +778,116 @@ const AdminDashboard: React.FC = () => {
                 Complete business overview including all revenue streams, analytics, and performance metrics.
               </Typography>
               
-              {/* Business Overview Cards */}
+              {/* Dynamic Business Overview Cards */}
               <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 3, mb: 4 }}>
-                <Card sx={{ bgcolor: 'primary.main', color: 'white' }}>
+                <Card sx={{ bgcolor: 'success.main', color: 'white' }}>
                   <CardContent>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                       <AgricultureIcon sx={{ fontSize: 40 }} />
                       <Box>
-                        <Typography variant="h6">Agro Tourism</Typography>
-                        <Typography variant="h4">₹2,45,000</Typography>
-                        <Typography variant="body2">This Month Revenue</Typography>
+                        <Typography variant="h6">Agro Tourism (60%)</Typography>
+                        <Typography variant="h4">
+                          ₹{websiteBookings.reduce((sum, booking) => {
+                            const agroAmount = booking.paymentSplit?.agroTourismAmount || Math.round(booking.totalAmount * 0.6);
+                            return booking.status === 'confirmed' ? sum + agroAmount : sum;
+                          }, 0).toLocaleString()}
+                        </Typography>
+                        <Typography variant="body2">Total Revenue</Typography>
                       </Box>
                     </Box>
                   </CardContent>
                 </Card>
                 
-                <Card sx={{ bgcolor: 'secondary.main', color: 'white' }}>
+                <Card sx={{ bgcolor: 'primary.main', color: 'white' }}>
                   <CardContent>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                       <PoolIcon sx={{ fontSize: 40 }} />
                       <Box>
-                        <Typography variant="h6">Water Park</Typography>
-                        <Typography variant="h4">₹4,85,000</Typography>
-                        <Typography variant="body2">This Month Revenue</Typography>
+                        <Typography variant="h6">Water Park (40%)</Typography>
+                        <Typography variant="h4">
+                          ₹{websiteBookings.reduce((sum, booking) => {
+                            const waterparkAmount = booking.paymentSplit?.funWaterparkAmount || Math.round(booking.totalAmount * 0.4);
+                            return booking.status === 'confirmed' ? sum + waterparkAmount : sum;
+                          }, 0).toLocaleString()}
+                        </Typography>
+                        <Typography variant="body2">Total Revenue</Typography>
                       </Box>
                     </Box>
                   </CardContent>
                 </Card>
                 
-                <Card sx={{ bgcolor: 'success.main', color: 'white' }}>
+                <Card sx={{ bgcolor: 'warning.main', color: 'white' }}>
                   <CardContent>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                       <BusinessIcon sx={{ fontSize: 40 }} />
                       <Box>
                         <Typography variant="h6">Total Business</Typography>
-                        <Typography variant="h4">₹7,30,000</Typography>
-                        <Typography variant="body2">This Month Revenue</Typography>
+                        <Typography variant="h4">
+                          ₹{websiteBookings.reduce((sum, booking) => {
+                            return booking.status === 'confirmed' ? sum + booking.totalAmount : sum;
+                          }, 0).toLocaleString()}
+                        </Typography>
+                        <Typography variant="body2">Combined Revenue</Typography>
                       </Box>
                     </Box>
                   </CardContent>
                 </Card>
               </Box>
               
-              <Typography variant="h6" sx={{ mb: 2 }}>Business Performance Metrics</Typography>
+              <Typography variant="h6" sx={{ mb: 2 }}>Dynamic Business Performance Metrics</Typography>
               <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 2, mb: 3 }}>
                 <Card>
                   <CardContent>
                     <Typography variant="body2" color="text.secondary">Total Bookings</Typography>
-                    <Typography variant="h5">1,247</Typography>
-                    <Typography variant="body2" color="success.main">+12% from last month</Typography>
+                    <Typography variant="h5">{websiteBookings.filter(b => b.status === 'confirmed').length}</Typography>
+                    <Typography variant="body2" color="success.main">Confirmed bookings</Typography>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent>
+                    <Typography variant="body2" color="text.secondary">Pending Bookings</Typography>
+                    <Typography variant="h5">{websiteBookings.filter(b => b.status === 'pending').length}</Typography>
+                    <Typography variant="body2" color="warning.main">Awaiting payment</Typography>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent>
+                    <Typography variant="body2" color="text.secondary">This Month Revenue</Typography>
+                    <Typography variant="h5">
+                      ₹{websiteBookings
+                        .filter(b => b.status === 'confirmed' && b.createdAt.startsWith(new Date().toISOString().slice(0, 7)))
+                        .reduce((sum, booking) => sum + booking.totalAmount, 0).toLocaleString()}
+                    </Typography>
+                    <Typography variant="body2" color="success.main">Current month</Typography>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent>
+                    <Typography variant="body2" color="text.secondary">Average Booking Value</Typography>
+                    <Typography variant="h5">
+                      ₹{websiteBookings.filter(b => b.status === 'confirmed').length > 0 
+                        ? Math.round(websiteBookings.reduce((sum, booking) => {
+                            return booking.status === 'confirmed' ? sum + booking.totalAmount : sum;
+                          }, 0) / websiteBookings.filter(b => b.status === 'confirmed').length).toLocaleString()
+                        : '0'}
+                    </Typography>
+                    <Typography variant="body2" color="info.main">Per booking</Typography>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent>
                     <Typography variant="body2" color="text.secondary">Active Packages</Typography>
-                    <Typography variant="h5">{packages.filter(p => p.is_active).length}</Typography>
-                    <Typography variant="body2" color="info.main">Across all businesses</Typography>
+                    <Typography variant="h5">{websitePackages.length}</Typography>
+                    <Typography variant="body2" color="info.main">Available packages</Typography>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent>
-                    <Typography variant="body2" color="text.secondary">Customer Satisfaction</Typography>
-                    <Typography variant="h5">4.8/5</Typography>
-                    <Typography variant="body2" color="success.main">Excellent rating</Typography>
+                    <Typography variant="body2" color="text.secondary">Total Guests</Typography>
+                    <Typography variant="h5">
+                      {websiteBookings.filter(b => b.status === 'confirmed').reduce((sum, booking) => sum + booking.adults + booking.children, 0)}
+                    </Typography>
+                    <Typography variant="body2" color="success.main">Adults + Children</Typography>
                   </CardContent>
                 </Card>
               </Box>
