@@ -684,21 +684,60 @@ const AdminDashboard: React.FC = () => {
                 Revenue from 40% payment split of all water park bookings
               </Typography>
               
-              {/* Water Park Revenue Stats */}
+              {/* Water Park Revenue Stats with GST */}
               <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 3, mb: 4 }}>
-                <Card sx={{ bgcolor: 'primary.main', color: 'white' }}>
+                <Card sx={{ bgcolor: 'success.main', color: 'white' }}>
                   <CardContent>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <PoolIcon sx={{ fontSize: 40 }} />
+                      <MoneyIcon sx={{ fontSize: 40 }} />
                       <Box>
-                        <Typography variant="h6">Total Revenue (40%)</Typography>
+                        <Typography variant="h6">Base Revenue (40%)</Typography>
                         <Typography variant="h4">
                           ₹{websiteBookings.reduce((sum, booking) => {
                             const waterparkAmount = booking.paymentSplit?.funWaterparkAmount || Math.round(booking.totalAmount * 0.4);
                             return booking.status === 'confirmed' ? sum + waterparkAmount : sum;
                           }, 0).toLocaleString()}
                         </Typography>
-                        <Typography variant="body2">From all confirmed bookings</Typography>
+                        <Typography variant="body2">Before GST</Typography>
+                      </Box>
+                    </Box>
+                  </CardContent>
+                </Card>
+                
+                <Card sx={{ bgcolor: 'warning.main', color: 'white' }}>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <BusinessIcon sx={{ fontSize: 40 }} />
+                      <Box>
+                        <Typography variant="h6">GST Collected (18%)</Typography>
+                        <Typography variant="h4">
+                          ₹{websiteBookings.reduce((sum, booking) => {
+                            const waterparkAmount = booking.paymentSplit?.funWaterparkAmount || Math.round(booking.totalAmount * 0.4);
+                            const gstAmount = Math.round(waterparkAmount * 0.18);
+                            return booking.status === 'confirmed' ? sum + gstAmount : sum;
+                          }, 0).toLocaleString()}
+                        </Typography>
+                        <Typography variant="body2">18% GST on Water Park</Typography>
+                      </Box>
+                    </Box>
+                  </CardContent>
+                </Card>
+                
+                <Card sx={{ bgcolor: 'primary.main', color: 'white' }}>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <PoolIcon sx={{ fontSize: 40 }} />
+                      <Box>
+                        <Typography variant="h6">Total with GST</Typography>
+                        <Typography variant="h4">
+                          ₹{websiteBookings.reduce((sum, booking) => {
+                            const waterparkAmount = booking.paymentSplit?.funWaterparkAmount || Math.round(booking.totalAmount * 0.4);
+                            const gstAmount = Math.round(waterparkAmount * 0.18);
+                            const totalWithGst = waterparkAmount + gstAmount;
+                            return booking.status === 'confirmed' ? sum + totalWithGst : sum;
+                          }, 0).toLocaleString()}
+                        </Typography>
+                        <Typography variant="body2">40% + 18% GST</Typography>
                       </Box>
                     </Box>
                   </CardContent>
@@ -728,7 +767,7 @@ const AdminDashboard: React.FC = () => {
                 </Card>
               </Box>
               
-              <Typography variant="h6" sx={{ mb: 2 }}>Fun & Water Park Revenue Breakdown</Typography>
+              <Typography variant="h6" sx={{ mb: 2 }}>Fun & Water Park Revenue Breakdown with GST</Typography>
               <TableContainer component={Paper}>
                 <Table>
                   <TableHead>
@@ -737,13 +776,18 @@ const AdminDashboard: React.FC = () => {
                       <TableCell>Booking Date</TableCell>
                       <TableCell>Visit Date</TableCell>
                       <TableCell>Total Amount</TableCell>
-                      <TableCell>Water Park Share (40%)</TableCell>
+                      <TableCell>Base (40%)</TableCell>
+                      <TableCell>GST (18%)</TableCell>
+                      <TableCell>Total with GST</TableCell>
                       <TableCell>Status</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {websiteBookings.filter(booking => booking.status === 'confirmed').map((booking) => {
                       const waterparkAmount = booking.paymentSplit?.funWaterparkAmount || Math.round(booking.totalAmount * 0.4);
+                      const gstAmount = Math.round(waterparkAmount * 0.18);
+                      const totalWithGst = waterparkAmount + gstAmount;
+                      
                       return (
                         <TableRow key={booking.id}>
                           <TableCell>{booking.name}</TableCell>
@@ -752,9 +796,25 @@ const AdminDashboard: React.FC = () => {
                           <TableCell>₹{booking.totalAmount.toLocaleString()}</TableCell>
                           <TableCell>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <MoneyIcon sx={{ fontSize: 16, color: 'success.main' }} />
+                              <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'success.main' }}>
+                                ₹{waterparkAmount.toLocaleString()}
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <BusinessIcon sx={{ fontSize: 16, color: 'warning.main' }} />
+                              <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'warning.main' }}>
+                                ₹{gstAmount.toLocaleString()}
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                               <PoolIcon sx={{ fontSize: 16, color: 'primary.main' }} />
                               <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                                ₹{waterparkAmount.toLocaleString()}
+                                ₹{totalWithGst.toLocaleString()}
                               </Typography>
                             </Box>
                           </TableCell>
