@@ -5,9 +5,9 @@ export const parkInfo = {
   tagline: "The Biggest Theme & Amusement Park",
   description: "Experience the ultimate water adventure with thrilling rides, exciting attractions, and unforgettable memories for the whole family.",
   contact: {
-    address: "At.post malgaom G NO 2481, TAL MIRAJ DIST SANGLI, Miraj, Miraj, Sangli- 416410, Maharashtra",
+    address: "Malgaon, Baliraja Krushi & Gramin Paryatan Kendra, 2481 Miraj, MAHARASHTRA, 416407",
     phone: "(+012) 3456 7890",
-    email: "balirajaagrotourism01@gmail.com"
+    email: "Itawate@outlook.com"
   },
   hours: {
     weekdays: "11:00 AM - 16:00 PM",
