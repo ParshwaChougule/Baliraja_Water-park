@@ -103,6 +103,23 @@ const Header = () => {
               <LinkContainer to="/contact">
                 <Nav.Link className="fw-semibold">Contact</Nav.Link>
               </LinkContainer>
+              <NavDropdown title="Management" id="management-dropdown" className="fw-semibold">
+                <NavDropdown.Item 
+                  href="https://baliraja-management.vercel.app" 
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <FaChartLine className="me-2" />
+                  Admin Dashboard
+                </NavDropdown.Item>
+                <NavDropdown.Divider />
+                <LinkContainer to="/admin/login">
+                  <NavDropdown.Item>
+                    <FaUser className="me-2" />
+                    Admin Login
+                  </NavDropdown.Item>
+                </LinkContainer>
+              </NavDropdown>
             </Nav>
             <div className="d-flex gap-2 align-items-center">
               <LinkContainer to="/packages">

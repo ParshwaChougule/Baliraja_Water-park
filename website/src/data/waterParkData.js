@@ -6,7 +6,7 @@ export const parkInfo = {
   description: "Experience the ultimate water adventure with thrilling rides, exciting attractions, and unforgettable memories for the whole family.",
   contact: {
     address: "Malgaon, Baliraja Krushi & Gramin Paryatan Kendra, 2481 Miraj, MAHARASHTRA, 416407",
-    phone: "(+012) 3456 7890",
+    phone: "+91 9021553797",
     email: "Itawate@outlook.com"
   },
   hours: {
