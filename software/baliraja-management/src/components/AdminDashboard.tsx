@@ -100,7 +100,7 @@ const AdminDashboard: React.FC = () => {
   
   const navigate = useNavigate();
 
-  const API_BASE = 'http://localhost:8080/api';
+  const API_BASE = 'http://localhost:8000/api';
 
   useEffect(() => {
     fetchPackages();
@@ -112,8 +112,16 @@ const AdminDashboard: React.FC = () => {
       setWebsiteBookings(bookings);
     });
     
+    // Auto-refresh data every 30 seconds
+    const refreshInterval = setInterval(() => {
+      fetchPackages();
+      fetchTickets();
+      syncWebsiteData();
+    }, 30000);
+    
     return () => {
       unsubscribe();
+      clearInterval(refreshInterval);
     };
   }, []);
 

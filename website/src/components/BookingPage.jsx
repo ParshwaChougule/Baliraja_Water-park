@@ -187,7 +187,7 @@ const BookingPage = () => {
       console.log('💰 Payment Split Details:', splitDetails);
       
       // Create order through PHP backend with split information
-      const orderResponse = await fetch('http://localhost:8080/api/booking-system.php', {
+      const orderResponse = await fetch('http://localhost:8000/api/booking-system.php', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -238,7 +238,7 @@ const BookingPage = () => {
             const totalAmount = calculateTotal();
             
             // Verify payment through PHP backend
-            const verifyResponse = await fetch('http://localhost:8080/api/booking-system.php', {
+            const verifyResponse = await fetch('http://localhost:8000/api/booking-system.php', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
