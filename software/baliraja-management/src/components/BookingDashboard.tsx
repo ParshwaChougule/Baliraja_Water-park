@@ -119,7 +119,7 @@ const BookingDashboard: React.FC = () => {
   const [alert, setAlert] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const navigate = useNavigate();
 
-  const API_BASE = 'http://localhost:8080/api';
+  const API_BASE = 'http://localhost:8001/api';
   const steps = ['Select Package', 'Customer Details', 'Payment', 'Confirmation'];
 
   useEffect(() => {

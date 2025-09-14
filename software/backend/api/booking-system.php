@@ -1,4 +1,8 @@
 <?php
+// Suppress PHP error output to prevent JSON corruption
+error_reporting(0);
+ini_set('display_errors', 0);
+
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
@@ -81,25 +85,25 @@ class BookingSystem {
             // Generate QR code data
             $qrData = json_encode([
                 'ticket_number' => $ticketNumber,
-                'customer_name' => $data['customer_name'],
-                'visit_date' => $data['visit_date'],
-                'adults' => $data['adults'],
-                'children' => $data['children'],
-                'package_name' => $data['package_name'],
-                'total_amount' => $data['total_amount']
+                'customer_name' => $data['customer_name'] ?? '',
+                'visit_date' => $data['visit_date'] ?? date('Y-m-d'),
+                'adults' => $data['adults'] ?? 1,
+                'children' => $data['children'] ?? 0,
+                'package_name' => $data['package_name'] ?? '',
+                'total_amount' => $data['total_amount'] ?? 0
             ]);
             
             $booking = [
                 'id' => rand(1000, 9999),
                 'ticket_number' => $ticketNumber,
-                'customer_name' => $data['customer_name'],
-                'customer_email' => $data['customer_email'],
-                'customer_phone' => $data['customer_phone'],
-                'package_name' => $data['package_name'],
-                'adults' => $data['adults'],
-                'children' => $data['children'],
-                'total_amount' => $data['total_amount'],
-                'visit_date' => $data['visit_date'],
+                'customer_name' => $data['customer_name'] ?? '',
+                'customer_email' => $data['customer_email'] ?? '',
+                'customer_phone' => $data['customer_phone'] ?? '',
+                'package_name' => $data['package_name'] ?? '',
+                'adults' => $data['adults'] ?? 1,
+                'children' => $data['children'] ?? 0,
+                'total_amount' => $data['total_amount'] ?? 0,
+                'visit_date' => $data['visit_date'] ?? date('Y-m-d'),
                 'payment_status' => 'pending',
                 'order_id' => $order['id'],
                 'qr_code' => base64_encode($qrData),
@@ -278,6 +282,7 @@ switch ($method) {
         if (isset($input['action'])) {
             switch ($input['action']) {
                 case 'create_booking':
+                case 'create_order':
                     echo json_encode($booking->createBooking($input));
                     break;
                     

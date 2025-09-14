@@ -8,6 +8,7 @@ import { packages, parkInfo } from '../data/waterParkData';
 import { saveBookingToRealtimeDB } from '../services/realtimeDatabaseService';
 import { useAuth } from '../contexts/AuthContext';
 import { createMockOrder, verifyMockPayment, initializeMockRazorpay } from '../services/mockPaymentService';
+import apiService from '../config/api';
 import { calculatePaymentSplit, processSplitPayment, getPaymentSplitSummary } from '../services/paymentSplitService';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -186,34 +187,21 @@ const BookingPage = () => {
       const splitDetails = calculatePaymentSplit(totalAmount);
       console.log('💰 Payment Split Details:', splitDetails);
       
-      // Create order through PHP backend with split information
-      const orderResponse = await fetch('http://localhost:8000/api/booking-system.php', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'create_booking',
-          total_amount: totalAmount,
-          package_id: selectedPackage?.id,
-          package_name: selectedPackage?.name,
-          customer_name: bookingData.name,
-          customer_email: bookingData.email,
-          customer_phone: bookingData.phone,
-          visit_date: bookingData.date,
-          adults: bookingData.adults,
-          children: bookingData.children,
-          // Add payment split information
-          payment_split: {
-            agro_tourism_amount: splitDetails.agroTourism.amount,
-            fun_waterpark_amount: splitDetails.funWaterpark.amount,
-            agro_tourism_percentage: splitDetails.agroTourism.percentage,
-            fun_waterpark_percentage: splitDetails.funWaterpark.percentage
-          }
-        })
+      // Create order through backend with split information
+      const orderResponse = await apiService.createOrder({
+        package_name: selectedPackage.name,
+        customer_name: bookingData.name,
+        customer_email: bookingData.email,
+        customer_phone: bookingData.phone,
+        visit_date: bookingData.date,
+        adults: bookingData.adults,
+        children: bookingData.children,
+        total_amount: totalAmount,
+        special_requests: bookingData.specialRequests,
+        payment_split: splitDetails
       });
       
-      const orderData = await orderResponse.json();
+      const orderData = orderResponse;
       
       if (!orderData.success) {
         throw new Error(orderData.error || 'Failed to create order');
@@ -237,29 +225,23 @@ const BookingPage = () => {
           try {
             const totalAmount = calculateTotal();
             
-            // Verify payment through PHP backend
-            const verifyResponse = await fetch('http://localhost:8000/api/booking-system.php', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                action: 'verify_payment',
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                customer_name: bookingData.name,
-                customer_email: bookingData.email,
-                customer_phone: bookingData.phone,
-                package_name: selectedPackage?.name,
-                adults: bookingData.adults,
-                children: bookingData.children,
-                amount: totalAmount,
-                visit_date: bookingData.date
-              })
+            // Verify payment through backend
+            const verifyResponse = await apiService.verifyPayment({
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_signature: response.razorpay_signature,
+              booking_id: orderData.booking_id,
+              customer_name: bookingData.name,
+              customer_email: bookingData.email,
+              package_name: selectedPackage.name,
+              visit_date: bookingData.date,
+              adults: bookingData.adults,
+              children: bookingData.children,
+              amount: totalAmount,
+              payment_split: splitDetails
             });
             
-            const verifyData = await verifyResponse.json();
+            const verifyData = verifyResponse;
             
             if (verifyData.payment_status === 'success') {
               // Process payment split after successful verification
