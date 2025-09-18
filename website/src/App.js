@@ -11,7 +11,6 @@ import Header from './components/Header';
 import Footer from './components/Footer';
 import FeaturesSection from './components/FeaturesSection';
 import GallerySection from './components/GallerySection';
-import AttractionsSection from './components/AttractionsSection';
 import PackagesSection from './components/PackagesSection';
 import TeamSection from './components/TeamSection';
 import TestimonialsSection from './components/TestimonialsSection';
@@ -28,6 +27,7 @@ import FunActivity from './components/FunActivity';
 import GardenActivity from './components/GardenActivity';
 import Gallery from './components/Gallery';
 import BookingsDisplay from './components/BookingsDisplay';
+import OfferPopup from './components/OfferPopup';
 
 // Individual page components
 const AboutPage = () => (
@@ -102,23 +102,6 @@ const GalleryPage = () => (
   </>
 );
 
-const AttractionsPage = () => (
-  <>
-    <Header />
-    <div className="py-5">
-      <div className="container">
-        <div className="row">
-          <div className="col-12 text-center">
-            <h1 className="display-4 fw-bold mb-4">Water Attractions</h1>
-            <p className="lead">Experience thrilling rides and exciting water attractions.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-    <AttractionsSection />
-    <Footer />
-  </>
-);
 
 const PackagesPage = () => (
   <>
@@ -222,6 +205,7 @@ function App() {
     <AuthProvider>
       <Router>
         <div className="App">
+          <OfferPopup />
           <Routes>
             <Route path="/" element={<WaterLandHome />} />
             <Route path="/home" element={<WaterLandHome />} />
@@ -232,7 +216,6 @@ function App() {
             <Route path="/water-activity" element={<WaterActivity />} />
             <Route path="/fun-activity" element={<FunActivity />} />
             <Route path="/garden-activity" element={<GardenActivity />} />
-            <Route path="/attractions" element={<AttractionsPage />} />
             <Route path="/packages" element={<PackagesPage />} />
             <Route path="/team" element={<TeamPage />} />
             <Route path="/testimonial" element={<TestimonialsPage />} />

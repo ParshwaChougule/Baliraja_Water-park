@@ -1,0 +1,77 @@
+<svg width="300" height="600" viewBox="0 0 300 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Slide gradient -->
+    <linearGradient id="slideGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00B4DB" />
+      <stop offset="100%" stop-color="#0083B0" />
+    </linearGradient>
+    
+    <!-- Water gradient -->
+    <linearGradient id="waterGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.8)" />
+      <stop offset="100%" stop-color="rgba(200,240,255,0.9)" />
+    </linearGradient>
+    
+    <!-- Water drop -->
+    <path id="waterDrop" d="M0,0 C2,0 5,3 5,5 C5,7 2,10 0,10 C-2,10 -5,7 -5,5 C-5,3 -2,0 0,0 Z" fill="#00B4DB" />
+    
+    <!-- Animation path -->
+    <path id="slidePath" d="M250 0 C200 100 180 200 200 300 C220 400 180 500 200 600" fill="none" />
+  </defs>
+  
+  <!-- Slide Structure -->
+  <path d="M250 0 C200 100 180 200 200 300 C220 400 180 500 200 600" 
+        stroke="url(#slideGradient)" 
+        stroke-width="30" 
+        stroke-linecap="round" 
+        fill="none"
+        filter="drop-shadow(0 0 10px rgba(0,150,255,0.5))" />
+  
+  <!-- Water Flow -->
+  <path d="M250 0 C200 100 180 200 200 300 C220 400 180 500 200 600" 
+        stroke="url(#waterGradient)" 
+        stroke-width="15" 
+        stroke-linecap="round" 
+        fill="none"
+        stroke-dasharray="20,10"
+        stroke-dashoffset="0">
+    <animate attributeName="stroke-dashoffset" values="0;100" dur="2s" repeatCount="indefinite" />
+  </path>
+  
+  <!-- Water Drops -->
+  <g>
+    <!-- Drop 1 -->
+    <use href="#waterDrop">
+      <animateMotion dur="3s" repeatCount="indefinite" rotate="auto">
+        <mpath href="#slidePath" />
+      </animateMotion>
+      <animate attributeName="opacity" values="0;1;0" dur="3s" repeatCount="indefinite" />
+    </use>
+    
+    <!-- Drop 2 -->
+    <use href="#waterDrop" transform="scale(0.8)">
+      <animateMotion dur="4s" repeatCount="indefinite" begin="1s" rotate="auto">
+        <mpath href="#slidePath" />
+      </animateMotion>
+      <animate attributeName="opacity" values="0;1;0" dur="4s" begin="1s" repeatCount="indefinite" />
+    </use>
+    
+    <!-- Drop 3 -->
+    <use href="#waterDrop" transform="scale(0.6)">
+      <animateMotion dur="3.5s" repeatCount="indefinite" begin="2s" rotate="auto">
+        <mpath href="#slidePath" />
+      </animateMotion>
+      <animate attributeName="opacity" values="0;1;0" dur="3.5s" begin="2s" repeatCount="indefinite" />
+    </use>
+  </g>
+  
+  <!-- Splash at bottom -->
+  <circle cx="200" cy="580" r="5" fill="#00B4DB" opacity="0">
+    <animate attributeName="r" values="5;20" dur="1.5s" repeatCount="indefinite" />
+    <animate attributeName="opacity" values="0;0.7;0" dur="1.5s" repeatCount="indefinite" />
+  </circle>
+  <circle cx="190" cy="590" r="4" fill="#00B4DB" opacity="0">
+    <animate attributeName="r" values="4;15" dur="2s" repeatCount="indefinite" begin="0.5s" />
+    <animate attributeName="opacity" values="0;0.5;0" dur="2s" repeatCount="indefinite" begin="0.5s" />
+  </circle>
+</svg>

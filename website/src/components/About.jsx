@@ -283,7 +283,7 @@ const About = () => {
           <div style={{ textAlign: 'center', marginBottom: '60px' }}>
             <h4 style={{ color: '#4FC3F7', fontSize: '18px', marginBottom: '10px', fontWeight: '600' }}>Our Gallery</h4>
             <h1 style={{ fontSize: '48px', fontWeight: 'bold', marginBottom: '20px', color: '#333' }}>
-              Captured Moments In Waterland
+              Captured Moments In Baliraja Water Park
             </h1>
             <p style={{ fontSize: '16px', color: '#666', maxWidth: '600px', margin: '0 auto', lineHeight: '1.6' }}>
               Lorem ipsum dolor, sit amet consectetur adipisicing elit. Tenetur adipisci facilis cupiditate recusandae aperiam temporibus corporis itaque quis facere, numquam, ad culpa deserunt sint dolorem autem obcaecati, ipsam mollitia hic.

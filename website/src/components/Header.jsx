@@ -1,43 +1,76 @@
 import React, { useContext } from 'react';
 import { Navbar, Nav, Container, Button, NavDropdown } from 'react-bootstrap';
 import { LinkContainer } from 'react-router-bootstrap';
+import { useNavigate } from 'react-router-dom';
 import { FaUser, FaSignOutAlt, FaChartLine, FaPhone, FaEnvelope, FaClock, FaMapMarkerAlt } from 'react-icons/fa';
 import { useAuth } from '../contexts/AuthContext';
 import { parkInfo } from '../data/waterParkData';
 
 const Header = () => {
   const { currentUser, logout } = useAuth();
+  const navigate = useNavigate();
 
   const handleLogout = async () => {
     await logout();
+    navigate('/');
   };
 
   return (
     <>
-      {/* Top Info Bar */}
-      <div className="bg-primary text-white py-2 d-none d-md-block">
-        <Container>
-          <marquee behavior="scroll" direction="left" scrollamount="5">
-            <div className="d-flex align-items-center" style={{ whiteSpace: 'nowrap' }}>
-              <small className="me-4">
-                <FaPhone className="me-1" /> {parkInfo.contact.phone}
-              </small>
-              <small className="me-4">
-                <FaEnvelope className="me-1" /> {parkInfo.contact.email}
-              </small>
-              <small className="me-4">
-                <FaClock className="me-1" /> Open: {parkInfo.hours.weekdays}
-              </small>
-              <small>
-                <FaMapMarkerAlt className="me-1" /> {parkInfo.contact.address}
-              </small>
+      {/* Top Info Bar - Sticky Marquee */}
+      <div className="bg-primary text-white py-1 py-md-2" style={{ 
+        position: 'fixed', 
+        width: '100%', 
+        top: 0, 
+        zIndex: 1030,
+        overflow: 'hidden'
+      }}>
+        <Container fluid className="px-0">
+          <div className="marquee-container">
+            <div className="marquee-content">
+              <div className="d-flex align-items-center" style={{ whiteSpace: 'nowrap', padding: '0 20px' }}>
+                <span className="me-3 me-md-4">
+                  <FaPhone className="me-1" /> {parkInfo.contact.phone}
+                </span>
+                <span className="me-3 me-md-4">
+                  <FaEnvelope className="me-1" /> {parkInfo.contact.email}
+                </span>
+                <span className="me-3 me-md-4 d-none d-sm-inline">
+                  <FaClock className="me-1" /> Open: {parkInfo.hours.weekdays}
+                </span>
+                <span className="me-3 me-md-4 d-none d-md-inline">
+                  <FaMapMarkerAlt className="me-1" /> {parkInfo.contact.address}
+                </span>
+              </div>
             </div>
-          </marquee>
+          </div>
         </Container>
+        <style jsx>{`
+          @keyframes scroll {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+          }
+          .marquee-container {
+            width: 100%;
+            overflow: hidden;
+            white-space: nowrap;
+          }
+          .marquee-content {
+            display: inline-block;
+            white-space: nowrap;
+            animation: scroll 30s linear infinite;
+            min-width: 100%;
+          }
+          @media (max-width: 768px) {
+            .marquee-content {
+              animation-duration: 20s;
+            }
+          }
+        `}</style>
       </div>
 
       {/* Main Navigation */}
-      <Navbar bg="white" expand="lg" className="shadow-sm sticky-top py-3">
+      <Navbar expand="lg" className="bg-white shadow-sm fixed-top" style={{ marginTop: '40px' }}>
         <Container>
           <LinkContainer to="/">
             <Navbar.Brand className="fw-bold fs-2 text-primary">
@@ -103,23 +136,6 @@ const Header = () => {
               <LinkContainer to="/contact">
                 <Nav.Link className="fw-semibold">Contact</Nav.Link>
               </LinkContainer>
-              <NavDropdown title="Management" id="management-dropdown" className="fw-semibold">
-                <NavDropdown.Item 
-                  href="https://baliraja-management.vercel.app" 
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <FaChartLine className="me-2" />
-                  Admin Dashboard
-                </NavDropdown.Item>
-                <NavDropdown.Divider />
-                <LinkContainer to="/admin/login">
-                  <NavDropdown.Item>
-                    <FaUser className="me-2" />
-                    Admin Login
-                  </NavDropdown.Item>
-                </LinkContainer>
-              </NavDropdown>
             </Nav>
             <div className="d-flex gap-2 align-items-center">
               <LinkContainer to="/packages">
@@ -127,12 +143,14 @@ const Header = () => {
                   View Packages
                 </Button>
               </LinkContainer>
-              <LinkContainer to="/bookings">
-                <Button variant="outline-success" size="sm" className="me-2">
-                  Check Bookings
-                </Button>
-              </LinkContainer>
-              <LinkContainer to="/booking">
+              {currentUser && (
+                <LinkContainer to="/bookings">
+                  <Button variant="outline-success" size="sm" className="me-2">
+                    Check Bookings
+                  </Button>
+                </LinkContainer>
+              )}
+              <LinkContainer to={currentUser ? "/booking" : "/login"}>
                 <Button variant="primary" size="sm">
                   Book Now
                 </Button>
@@ -158,15 +176,7 @@ const Header = () => {
                     Logout
                   </NavDropdown.Item>
                 </NavDropdown>
-              ) : (
-                <div className="d-flex gap-2 ms-2">
-                  <LinkContainer to="/login">
-                    <Button variant="outline-secondary" size="sm">
-                      Login
-                    </Button>
-                  </LinkContainer>
-                </div>
-              )}
+              ) : null}
             </div>
           </Navbar.Collapse>
         </Container>

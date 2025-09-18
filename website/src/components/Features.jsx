@@ -33,7 +33,16 @@ const Features = () => {
       </section>
 
       {/* Feature Start */}
-      <div className="container-fluid feature py-5">
+      <div className="container-fluid feature py-5" style={{
+        backgroundImage: 'linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url("/images/hero/pool-fun.jpg")',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed',
+        backgroundRepeat: 'no-repeat',
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center'
+      }}>
         <div className="container py-5">
           <div className="text-center mx-auto pb-5 wow fadeInUp" data-wow-delay="0.2s" style={{maxWidth: '800px'}}>
             <h4 className="text-primary">Our Features</h4>

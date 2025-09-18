@@ -1,8 +1,21 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import Header from './Header';
 import HeroBanner from './HeroBanner';
 
 const ModernHome = () => {
+  const navigate = useNavigate();
+  const { currentUser } = useAuth();
+
+  const handleBookNow = () => {
+    if (currentUser) {
+      navigate('/booking');
+    } else {
+      navigate('/login');
+    }
+  };
+
   return (
     <div>
       <Header />
@@ -635,17 +648,19 @@ const ModernHome = () => {
                 </div>
               </div>
 
-              <button style={{
-                backgroundColor: '#4FC3F7',
-                color: 'white',
-                border: 'none',
-                padding: '15px 30px',
-                borderRadius: '25px',
-                fontSize: '16px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'background-color 0.3s ease'
-              }}>
+              <button 
+                onClick={handleBookNow}
+                style={{
+                  backgroundColor: '#4FC3F7',
+                  color: 'white',
+                  border: 'none',
+                  padding: '15px 30px',
+                  borderRadius: '25px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.3s ease'
+                }}>
                 Book Now
               </button>
             </div>
@@ -708,18 +723,20 @@ const ModernHome = () => {
                   </div>
                 </div>
 
-                <button style={{
-                  backgroundColor: '#4FC3F7',
-                  color: 'white',
-                  border: 'none',
-                  padding: '12px 30px',
-                  borderRadius: '25px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  width: '100%',
-                  transition: 'background-color 0.3s ease'
-                }}>
+                <button 
+                  onClick={handleBookNow}
+                  style={{
+                    backgroundColor: '#4FC3F7',
+                    color: 'white',
+                    border: 'none',
+                    padding: '12px 30px',
+                    borderRadius: '25px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    width: '100%',
+                    transition: 'background-color 0.3s ease'
+                  }}>
                   Book Now
                 </button>
               </div>
@@ -775,18 +792,20 @@ const ModernHome = () => {
                   </div>
                 </div>
 
-                <button style={{
-                  backgroundColor: '#2C3E50',
-                  color: 'white',
-                  border: 'none',
-                  padding: '12px 30px',
-                  borderRadius: '25px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  width: '100%',
-                  transition: 'background-color 0.3s ease'
-                }}>
+                <button 
+                  onClick={handleBookNow}
+                  style={{
+                    backgroundColor: 'white',
+                    color: '#4FC3F7',
+                    border: 'none',
+                    padding: '12px 30px',
+                    borderRadius: '25px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    width: '100%',
+                    transition: 'background-color 0.3s ease'
+                  }}>
                   Book Now
                 </button>
               </div>

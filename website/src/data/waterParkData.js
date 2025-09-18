@@ -1,8 +1,8 @@
 // WaterLand Water Park Data Structure
 
 export const parkInfo = {
-  name: "baliraja agro tourism",
-  tagline: "The Biggest Theme & Amusement Park",
+  name: "Baliraja Water Park",
+  tagline: "The Biggest Water Park & Amusement Park",
   description: "Experience the ultimate water adventure with thrilling rides, exciting attractions, and unforgettable memories for the whole family.",
   contact: {
     address: "Malgaon, Baliraja Krushi & Gramin Paryatan Kendra, 2481 Miraj, MAHARASHTRA, 416407",
@@ -22,7 +22,7 @@ export const services = [
     title: "Wave Pool",
     description: "Experience the thrill of ocean waves in our artificial wave pool with safe and exciting water fun.",
     icon: "water",
-    image: "/images/services/wavePool.jpg"
+    image: "/images/services/208A8215.JPG"
   },
   {
     id: 2,

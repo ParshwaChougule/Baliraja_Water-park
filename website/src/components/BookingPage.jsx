@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, Modal, Badge, Spinner, ListGroup, ProgressBar } from 'react-bootstrap';
 import { FaTicketAlt, FaCalendarAlt, FaUsers, FaCreditCard, FaCheck, FaSignInAlt, FaUser, FaLock, FaEye, FaEyeSlash, FaSwimmer, FaWater, FaClock, FaMapMarkerAlt, FaPhone, FaEnvelope, FaChild, FaUserFriends, FaDownload, FaPrint, FaQrcode, FaStar, FaShieldAlt, FaCheckCircle } from 'react-icons/fa';
+import TicketAvailabilityPopup from './TicketAvailabilityPopup';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import Header from './Header';
 import Footer from './Footer';
 import { packages, parkInfo } from '../data/waterParkData';
-import { saveBookingToRealtimeDB } from '../services/realtimeDatabaseService';
+import { saveBookingToRealtimeDB, updateBookingStatusInRealtimeDB } from '../services/realtimeDatabaseService';
 import { useAuth } from '../contexts/AuthContext';
 import { createMockOrder, verifyMockPayment, initializeMockRazorpay } from '../services/mockPaymentService';
 import apiService from '../config/api';
@@ -14,11 +15,13 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
 const BookingPage = () => {
+  // State definitions
   const [searchParams] = useSearchParams();
   const { currentUser, loading: authLoading, login } = useAuth();
   
   console.log('🔥 BookingPage - Auth loading:', authLoading);
   console.log('🔥 BookingPage - Current user:', currentUser);
+  
   const [bookingData, setBookingData] = useState({
     package: '',
     date: '',
@@ -43,13 +46,55 @@ const BookingPage = () => {
     email: '',
     password: ''
   });
+  
   const [showPassword, setShowPassword] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [ticketData, setTicketData] = useState(null);
   const [showTicketModal, setShowTicketModal] = useState(false);
+  const [availableTickets, setAvailableTickets] = useState(500);
+  const [isSoldOut, setIsSoldOut] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState('');
   const [paymentSplitData, setPaymentSplitData] = useState(null);
   const ticketRef = useRef();
+
+  // Check ticket availability for selected date
+  const checkTicketAvailability = async (date) => {
+    try {
+      if (!date) return;
+      
+      // In a real app, you would fetch this from your backend
+      // For now, we'll simulate it with localStorage
+      const today = new Date().toISOString().split('T')[0];
+      const storedDate = localStorage.getItem('lastBookingDate');
+      
+      if (storedDate === today) {
+        const bookedCount = parseInt(localStorage.getItem('ticketsBookedToday') || '0');
+        const available = Math.max(0, 500 - bookedCount);
+        setAvailableTickets(available);
+        setIsSoldOut(available <= 0);
+      } else {
+        // New day, reset counter
+        localStorage.setItem('lastBookingDate', today);
+        localStorage.setItem('ticketsBookedToday', '0');
+        setAvailableTickets(500);
+        setIsSoldOut(false);
+      }
+      setLastUpdated(new Date().toLocaleTimeString());
+    } catch (error) {
+      console.error('Error checking ticket availability:', error);
+      // Fallback to default values
+      setAvailableTickets(500);
+      setIsSoldOut(false);
+    }
+  };
+
+  // Update ticket count when date changes
+  useEffect(() => {
+    if (bookingData.date) {
+      checkTicketAvailability(bookingData.date);
+    }
+  }, [bookingData.date]);
 
   // Pre-select package from URL parameter and auto-fill user data
   useEffect(() => {
@@ -140,6 +185,16 @@ const BookingPage = () => {
     if (selectedDate < today) {
       newErrors.date = 'Please select a future date';
     }
+    
+    // Check ticket availability
+    if (bookingData.date && availableTickets > 0) {
+      const totalGuests = bookingData.adults + bookingData.children;
+      if (totalGuests > availableTickets) {
+        newErrors.adults = `Only ${availableTickets} tickets available for the selected date`;
+      }
+    } else if (isSoldOut) {
+      newErrors.date = 'Sorry, all tickets are sold out for the selected date';
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -159,20 +214,45 @@ const BookingPage = () => {
     }
   };
 
-  const loadRazorpayScript = () => {
+  const loadRazorpayScript = async () => {
+    // Check if Razorpay is already loaded
+    if (window.Razorpay) {
+      console.log('✅ Razorpay already loaded');
+      return true;
+    }
+
     return new Promise((resolve) => {
-      // Load real Razorpay script
+      // Set a timeout to handle cases where the script takes too long to load
+      const timeout = setTimeout(() => {
+        console.warn('Razorpay script loading timed out, falling back to mock');
+        resolve(initializeMockRazorpay());
+      }, 10000); // 10 second timeout
+
+      // Load Razorpay script
       const script = document.createElement('script');
       script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
+      script.defer = true;
+      
       script.onload = () => {
-        console.log('✅ Real Razorpay loaded successfully');
-        resolve(true);
+        clearTimeout(timeout);
+        if (window.Razorpay) {
+          console.log('✅ Razorpay loaded successfully');
+          resolve(true);
+        } else {
+          console.error('Razorpay loaded but window.Razorpay is not available');
+          resolve(initializeMockRazorpay());
+        }
       };
-      script.onerror = () => {
-        console.log('❌ Razorpay failed to load, using mock');
+      
+      script.onerror = (error) => {
+        clearTimeout(timeout);
+        console.error('❌ Failed to load Razorpay script:', error);
         resolve(initializeMockRazorpay());
       };
-      document.body.appendChild(script);
+      
+      // Add to document
+      document.head.appendChild(script);
     });
   };
 
@@ -186,6 +266,10 @@ const BookingPage = () => {
       // Calculate payment split before creating order
       const splitDetails = calculatePaymentSplit(totalAmount);
       console.log('💰 Payment Split Details:', splitDetails);
+      
+      // Get Razorpay config from API service
+      const config = apiService.getConfig();
+      const razorpayConfig = config.RAZORPAY_CONFIG || {};
       
       // Create order through backend with split information
       const orderResponse = await apiService.createOrder({
@@ -202,28 +286,36 @@ const BookingPage = () => {
       });
       
       const orderData = orderResponse;
+      console.log('Order response:', orderData);
       
       if (!orderData.success) {
         throw new Error(orderData.error || 'Failed to create order');
       }
       
-      const res = await loadRazorpayScript();
+      // Load Razorpay script
+      const razorpayLoaded = await loadRazorpayScript();
       
-      if (!res) {
+      if (!razorpayLoaded) {
         throw new Error('Razorpay SDK failed to load. Please check your internet connection.');
       }
 
+      // Prepare Razorpay options
       const options = {
-        key: orderData.razorpay_order.key_id,
-        amount: orderData.razorpay_order.amount,
-        currency: orderData.razorpay_order.currency,
-        order_id: orderData.razorpay_order.order_id,
-        name: 'Baliraja Water Park',
+        ...razorpayConfig, // Apply config from API service
+        key: razorpayConfig.key || orderData.razorpay_order?.key_id,
+        amount: orderData.razorpay_order?.amount || (totalAmount * 100), // Convert to paise
+        currency: orderData.razorpay_order?.currency || 'INR',
+        order_id: orderData.razorpay_order?.order_id,
+        name: razorpayConfig.name || 'Baliraja Water Park',
         description: `${selectedPackage?.name} - Water Park Booking`,
-        image: '/logo192.png',
+        image: razorpayConfig.image || '/logo192.png',
         handler: async function (response) {
           try {
-            const totalAmount = calculateTotal();
+            console.log('Razorpay payment response:', response);
+            
+            if (!response.razorpay_payment_id) {
+              throw new Error('Payment ID not received from Razorpay');
+            }
             
             // Verify payment through backend
             const verifyResponse = await apiService.verifyPayment({
@@ -241,9 +333,9 @@ const BookingPage = () => {
               payment_split: splitDetails
             });
             
-            const verifyData = verifyResponse;
+            console.log('Payment verification response:', verifyResponse);
             
-            if (verifyData.payment_status === 'success') {
+            if (verifyResponse.payment_status === 'success') {
               // Process payment split after successful verification
               const splitResult = await processSplitPayment(response, totalAmount);
               console.log('💰 Payment Split Result:', splitResult);
@@ -258,53 +350,140 @@ const BookingPage = () => {
               }
               
               // Payment verified, save to Firebase and confirm booking
-              confirmBooking(response.razorpay_payment_id, verifyData.ticket_number, verifyData.qr_code, splitResult);
+              confirmBooking(
+                response.razorpay_payment_id, 
+                verifyResponse.ticket_number || `TKT-${Date.now()}`,
+                verifyResponse.qr_code || '',
+                splitResult
+              );
             } else {
-              throw new Error(verifyData.error || 'Payment verification failed');
+              throw new Error(verifyResponse.error || 'Payment verification failed');
             }
           } catch (error) {
             console.error('Payment verification error:', error);
-            setError('Payment verification failed. Please contact support.');
+            setError(`Payment verification failed: ${error.message}. Please contact support with payment ID: ${response?.razorpay_payment_id || 'N/A'}`);
             setLoading(false);
           }
         },
         prefill: {
-          name: bookingData.name,
-          email: bookingData.email,
-          contact: bookingData.phone,
+          name: bookingData.name || '',
+          email: bookingData.email || '',
+          contact: bookingData.phone || '',
         },
-        theme: {
+        theme: razorpayConfig.theme || {
           color: '#0d6efd',
         },
         modal: {
           ondismiss: () => {
             setLoading(false);
-            setError('Payment cancelled');
-          }
+            setError('Payment was cancelled by user');
+          },
+          timeout: 300000 // 5 minutes timeout
+        },
+        notes: {
+          booking_reference: orderData.booking_id,
+          package: selectedPackage.name,
+          visit_date: bookingData.date
+        },
+        timeout: 300, // 5 minutes in seconds
+        retry: {
+          enabled: true,
+          max_count: 2
         }
       };
 
+      // Validate required Razorpay options
+      if (!options.key) {
+        throw new Error('Razorpay key is missing. Please check your configuration.');
+      }
+      
+      if (!options.order_id && !options.amount) {
+        throw new Error('Insufficient payment details. Please try again.');
+      }
+
+      console.log('Opening Razorpay with options:', {
+        ...options,
+        key: options.key ? '***' + options.key.slice(-4) : 'undefined'
+      });
+      
       const paymentObject = new window.Razorpay(options);
+      
+      // Add event listeners for better error handling
+      paymentObject.on('payment.failed', function(response) {
+        console.error('Payment failed:', response.error);
+        setError(`Payment failed: ${response.error.description || 'Unknown error'}`);
+        setLoading(false);
+      });
+      
       paymentObject.open();
       
     } catch (error) {
-      console.error('Payment error:', error);
-      setError(error.message || 'Payment failed. Please try again.');
+      console.error('Payment error:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
+      setError(`Payment failed: ${error.message || 'Please try again or contact support'}`);
       setLoading(false);
+    }
+  };
+
+  const updateTicketCount = (count) => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const storedDate = localStorage.getItem('lastBookingDate');
+      let bookedCount = 0;
+      
+      if (storedDate === today) {
+        bookedCount = parseInt(localStorage.getItem('ticketsBookedToday') || '0');
+      } else {
+        localStorage.setItem('lastBookingDate', today);
+      }
+      
+      const newCount = Math.min(bookedCount + count, 500);
+      localStorage.setItem('ticketsBookedToday', newCount.toString());
+      
+      // Update available tickets
+      const available = 500 - newCount;
+      setAvailableTickets(available);
+      setIsSoldOut(available <= 0);
+      setLastUpdated(new Date().toLocaleTimeString());
+      
+      return newCount;
+    } catch (error) {
+      console.error('Error updating ticket count:', error);
+      return 0;
     }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (validateForm()) {
-      // Check if user is logged in
-      if (!currentUser) {
-        // Show login modal if user is not logged in
-        setShowLoginModal(true);
-      } else {
-        // Proceed to confirmation if user is logged in
-        setShowConfirmation(true);
-      }
+    
+    if (!validateForm()) {
+      return;
+    }
+    
+    // Check ticket availability again right before submission
+    const totalGuests = bookingData.adults + bookingData.children;
+    if (totalGuests > availableTickets) {
+      setError(`Sorry, only ${availableTickets} tickets are available for the selected date.`);
+      return;
+    }
+    
+    // Update ticket count
+    const newCount = updateTicketCount(totalGuests);
+    if (newCount > 500) {
+      setError('Sorry, tickets are sold out for the selected date.');
+      return;
+    }
+    
+    // Check if user is logged in
+    if (!currentUser) {
+      // Show login modal if user is not logged in
+      setShowLoginModal(true);
+    } else {
+      // Proceed to confirmation if user is logged in
+      setShowConfirmation(true);
     }
   };
 
@@ -323,22 +502,27 @@ const BookingPage = () => {
     setLoginLoading(true);
     setLoginError('');
 
-    const result = await login(loginData.email, loginData.password);
-    
-    if (result.success) {
-      setShowLoginModal(false);
-      setShowConfirmation(true);
-      // Auto-fill user data after login
-      setBookingData(prev => ({
-        ...prev,
-        name: result.user.displayName || '',
-        email: result.user.email || ''
-      }));
-    } else {
-      setLoginError(result.error);
+    try {
+      const result = await login(loginData.email, loginData.password);
+      
+      if (result.success) {
+        setShowLoginModal(false);
+        setShowConfirmation(true);
+        // Auto-fill user data after login
+        setBookingData(prev => ({
+          ...prev,
+          name: result.user.displayName || '',
+          email: result.user.email || ''
+        }));
+      } else {
+        setLoginError(result.error || 'Login failed. Please check your credentials.');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setLoginError('An error occurred during login. Please try again.');
+    } finally {
+      setLoginLoading(false);
     }
-    
-    setLoginLoading(false);
   };
 
   const confirmBooking = async (paymentId = null, ticketNumber = null, qrCode = null, splitResult = null) => {
@@ -472,6 +656,7 @@ const BookingPage = () => {
 
   const selectedPackage = packages.find(pkg => pkg.id === parseInt(bookingData.package));
 
+  // Main component return
   return (
     <>
       <Header />
@@ -672,9 +857,19 @@ const BookingPage = () => {
                           <Form.Control.Feedback type="invalid">
                             {errors.date}
                           </Form.Control.Feedback>
-                          <Form.Text className="text-muted">
-                            Select your preferred visit date
-                          </Form.Text>
+                          <div className="d-flex justify-content-between align-items-center mt-2">
+                            <Form.Text className="text-muted">
+                              Select your preferred visit date
+                            </Form.Text>
+                            {bookingData.date && (
+                              <div className="text-end">
+                                <span className={`badge ${isSoldOut ? 'bg-danger' : 'bg-success'} p-2`}>
+                                  {isSoldOut ? 'SOLD OUT' : `${availableTickets} Tickets Available`}
+                                </span>
+                                <div className="small text-muted">Updated: {lastUpdated}</div>
+                              </div>
+                            )}
+                          </div>
                         </Form.Group>
                       </Col>
 
@@ -1401,6 +1596,13 @@ const BookingPage = () => {
       </Modal>
 
       <Footer />
+      
+      {/* Ticket Availability Popup */}
+      <TicketAvailabilityPopup 
+        availableTickets={availableTickets}
+        isSoldOut={isSoldOut}
+        lastUpdated={lastUpdated}
+      />
     </>
   );
 };

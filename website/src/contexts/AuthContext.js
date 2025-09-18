@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { onAuthStateChange, loginUser, registerUser, logoutUser } from '../services/authService';
 
 const AuthContext = createContext();
@@ -14,63 +14,157 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    // Check if Firebase is properly configured
-    try {
-      const unsubscribe = onAuthStateChange((user) => {
-        console.log('🔥 Auth state changed:', user ? user.email : 'No user');
-        setCurrentUser(user);
-        setLoading(false);
-      });
-      return unsubscribe;
-    } catch (error) {
-      console.warn('Firebase not configured properly:', error.message);
-      setLoading(false);
-      return () => {};
-    }
+  // Handle auth state changes
+  const handleAuthStateChanged = useCallback((user) => {
+    console.log('🔥 Auth state changed:', user ? user.email : 'No user');
+    setCurrentUser(user);
+    setLoading(false);
+    setError(null);
   }, []);
+
+  // Initialize auth state listener
+  useEffect(() => {
+    console.log('🔐 Initializing auth state listener...');
+    let unsubscribe;
+    
+    try {
+      unsubscribe = onAuthStateChange((user) => {
+        handleAuthStateChanged(user);
+      });
+    } catch (error) {
+      console.error('❌ Auth state listener error:', error);
+      setError({
+        code: 'auth/initialization-error',
+        message: 'Failed to initialize authentication. Please refresh the page.'
+      });
+      setLoading(false);
+    }
+    
+    return () => {
+      if (unsubscribe) {
+        console.log('🔒 Cleaning up auth listener');
+        unsubscribe();
+      }
+    };
+  }, [handleAuthStateChanged]);
 
   // Register function without automatic login
   const register = async (email, password, displayName) => {
-    const result = await registerUser(email, password, displayName);
-    if (result.success) {
-      console.log('✅ Registration successful');
-      // Logout the user after registration so they need to login manually
-      await logoutUser();
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const result = await registerUser(email, password, displayName);
+      
+      if (result.success) {
+        console.log('✅ Registration successful');
+        // Logout the user after registration so they need to login manually
+        await logoutUser();
+      } else {
+        setError({
+          code: result.code || 'auth/registration-failed',
+          message: result.error || 'Registration failed. Please try again.'
+        });
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('❌ Registration error:', error);
+      setError({
+        code: error.code || 'auth/registration-error',
+        message: error.message || 'An error occurred during registration.'
+      });
+      return { success: false, error: error.message };
+    } finally {
+      setLoading(false);
     }
-    return result;
   };
 
   // Login function
   const login = async (email, password) => {
-    const result = await loginUser(email, password);
-    if (result.success) {
-      console.log('✅ Login successful');
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const result = await loginUser(email, password);
+      
+      if (!result.success) {
+        setError({
+          code: result.code || 'auth/login-failed',
+          message: result.error || 'Login failed. Please check your credentials.'
+        });
+      } else {
+        console.log('✅ Login successful');
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('❌ Login error:', error);
+      setError({
+        code: error.code || 'auth/login-error',
+        message: error.message || 'An error occurred during login.'
+      });
+      return { success: false, error: error.message };
+    } finally {
+      setLoading(false);
     }
-    return result;
   };
 
   // Logout function
   const logout = async () => {
-    const result = await logoutUser();
-    if (result.success) {
-      console.log('✅ Logout successful');
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const result = await logoutUser();
+      
+      if (result.success) {
+        console.log('✅ Logout successful');
+        setCurrentUser(null);
+      } else {
+        setError({
+          code: 'auth/logout-failed',
+          message: result.error || 'Failed to log out. Please try again.'
+        });
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('❌ Logout error:', error);
+      setError({
+        code: 'auth/logout-error',
+        message: 'An error occurred while logging out.'
+      });
+      return { success: false, error: error.message };
+    } finally {
+      setLoading(false);
     }
-    return result;
   };
 
   const value = {
     currentUser,
     loading,
+    error,
     register,
     login,
-    logout
+    logout,
+    clearError: () => setError(null)
   };
 
   return (
     <AuthContext.Provider value={value}>
-      {children}
+      {!loading ? children : (
+        <div className="d-flex justify-content-center align-items-center" style={{ height: '100vh' }}>
+          <div className="text-center">
+            <div className="spinner-border text-primary" role="status">
+              <span className="visually-hidden">Loading...</span>
+            </div>
+            <p className="mt-2">Initializing authentication...</p>
+          </div>
+        </div>
+      )}
     </AuthContext.Provider>
   );
 };

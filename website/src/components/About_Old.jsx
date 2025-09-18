@@ -168,7 +168,7 @@ const About = () => {
                 <p style={{ fontSize: '16px', color: '#666', fontWeight: '500' }}>Water Attractions</p>
               </div>
               <div>
-                <h2 style={{ fontSize: '48px', fontWeight: 'bold', color: '#4FC3F7', marginBottom: '10px' }}>50+</h2>
+                <h2 style={{ fontSize: '48px', fontWeight: 'bold', color: '#4FC3F7', marginBottom: '10px' }}>35+</h2>
                 <p style={{ fontSize: '16px', color: '#666', fontWeight: '500' }}>Expert Staff</p>
               </div>
               <div>

@@ -4,7 +4,6 @@ import Header from './Header';
 import HeroBanner from './HeroBanner';
 import FeaturesSection from './FeaturesSection';
 import ServicesSection from './ServicesSection';
-import AttractionsSection from './AttractionsSection';
 import PackagesSection from './PackagesSection';
 import Footer from './Footer';
 
@@ -15,7 +14,6 @@ const WaterLandHome = () => {
       <HeroBanner />
       <FeaturesSection />
       <ServicesSection />
-      <AttractionsSection />
       <PackagesSection />
       <Footer />
     </div>

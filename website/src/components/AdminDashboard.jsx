@@ -13,7 +13,8 @@ import {
   FaCheck,
   FaTimes,
   FaImages,
-  FaSignOutAlt
+  FaSignOutAlt,
+  FaPlus
 } from 'react-icons/fa';
 import { 
   getBookingsFromRealtimeDB, 
@@ -24,6 +25,7 @@ import {
   markMessageAsReadInRealtimeDB
 } from '../services/realtimeDatabaseService';
 import GalleryManager from './GalleryManager';
+import AdminBookingForm from './AdminBookingForm';
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -229,6 +231,20 @@ const AdminDashboard = () => {
                   </Nav.Item>
                   <Nav.Item className="mb-2">
                     <Nav.Link 
+                      eventKey="new-booking"
+                      className="rounded-pill px-3 py-2"
+                      style={{ 
+                        transition: 'all 0.3s ease',
+                        fontSize: '1.1rem',
+                        backgroundColor: activeTab === 'new-booking' ? 'rgba(13, 110, 253, 0.15)' : 'transparent'
+                      }}
+                    >
+                      <FaPlus className="me-2" />
+                      New Booking
+                    </Nav.Link>
+                  </Nav.Item>
+                  <Nav.Item className="mb-2">
+                    <Nav.Link 
                       eventKey="bookings"
                       className="rounded-pill px-3 py-2"
                       style={{ 
@@ -411,6 +427,15 @@ const AdminDashboard = () => {
                     </Card>
                   </Col>
                 </Row>
+              </Tab.Pane>
+
+              {/* New Booking Tab */}
+              <Tab.Pane eventKey="new-booking">
+                <AdminBookingForm onBookingSuccess={() => {
+                  // Refresh the bookings list when a new booking is created
+                  loadData();
+                  setActiveTab('bookings');
+                }} />
               </Tab.Pane>
 
               {/* Bookings Tab */}

@@ -3,7 +3,7 @@
         'name' => 'baliraja/waterpark-management',
         'pretty_version' => 'dev-main',
         'version' => 'dev-main',
-        'reference' => '351ba39d8c3bfecf5b3b4f6a7c47101f1c580d6d',
+        'reference' => '6a66f93d854be786413d8cc0a66935c3d2fd45eb',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -13,7 +13,7 @@
         'baliraja/waterpark-management' => array(
             'pretty_version' => 'dev-main',
             'version' => 'dev-main',
-            'reference' => '351ba39d8c3bfecf5b3b4f6a7c47101f1c580d6d',
+            'reference' => '6a66f93d854be786413d8cc0a66935c3d2fd45eb',
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),

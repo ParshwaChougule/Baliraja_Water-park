@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="100" height="300" viewBox="0 0 100 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Main Vine -->
+  <path d="M50 0C50 30 40 50 30 70C20 90 40 120 30 150C20 180 60 200 50 250C40 290 30 300 30 300" 
+        stroke="#2E8B57" 
+        stroke-width="8" 
+        stroke-linecap="round"
+        fill="none">
+    <animate 
+      attributeName="stroke-dasharray"
+      values="0,500; 500,0"
+      dur="10s"
+      repeatCount="indefinite"/>
+  </path>
+  
+  <!-- Leaves -->
+  <path d="M30 70L10 60L15 90Z" fill="#228B22">
+    <animateTransform 
+      attributeName="transform" 
+      type="rotate" 
+      values="-5 30 70; 5 30 70; -5 30 70" 
+      dur="4s" 
+      repeatCount="indefinite"/>
+  </path>
+  
+  <path d="M40 120L60 110L55 140Z" fill="#228B22">
+    <animateTransform 
+      attributeName="transform" 
+      type="rotate" 
+      values="5 40 120; -5 40 120; 5 40 120" 
+      dur="3.5s" 
+      repeatCount="indefinite"/>
+  </path>
+  
+  <path d="M30 200L10 190L15 220Z" fill="#2E8B57">
+    <animateTransform 
+      attributeName="transform" 
+      type="rotate" 
+      values="-3 30 200; 3 30 200; -3 30 200" 
+      dur="5s" 
+      repeatCount="indefinite"/>
+  </path>
+  
+  <path d="M50 250L70 240L65 270Z" fill="#2E8B57">
+    <animateTransform 
+      attributeName="transform" 
+      type="rotate" 
+      values="3 50 250; -3 50 250; 3 50 250" 
+      dur="4.5s" 
+      repeatCount="indefinite"/>
+  </path>
+</svg>

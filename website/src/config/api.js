@@ -10,13 +10,21 @@ const API_CONFIG = {
     TICKETS_ENDPOINT: 'http://localhost:8000/api/tickets.php'
   },
   
-  // GitHub Pages or Netlify deployment (when software is hosted)
+  // Production deployment (using direct backend URL)
   PRODUCTION: {
-    // Replace with your actual GitHub Pages URL or hosting URL
-    BASE_URL: 'https://yourusername.github.io/baliraja-water-park-management/backend/api',
-    BOOKING_ENDPOINT: 'https://yourusername.github.io/baliraja-water-park-management/backend/api/booking-system.php',
-    PACKAGES_ENDPOINT: 'https://yourusername.github.io/baliraja-water-park-management/backend/api/packages.php',
-    TICKETS_ENDPOINT: 'https://yourusername.github.io/baliraja-water-park-management/backend/api/tickets.php'
+    BASE_URL: 'https://balirajafunpark.com/backend/api',
+    BOOKING_ENDPOINT: 'https://balirajafunpark.com/backend/api/booking-system.php',
+    PACKAGES_ENDPOINT: 'https://balirajafunpark.com/backend/api/packages.php',
+    TICKETS_ENDPOINT: 'https://balirajafunpark.com/backend/api/tickets.php',
+    RAZORPAY_CONFIG: {
+      key: 'rzp_test_xxxxxxxxxxxxxx', // Replace with your Razorpay test key
+      name: 'Baliraja Water Park',
+      description: 'Water Park Booking',
+      image: 'https://balirajafunpark.com/logo.png',
+      theme: {
+        color: '#0d6efd'
+      }
+    }
   },
   
   // Custom hosting (if you deploy to your own server)
